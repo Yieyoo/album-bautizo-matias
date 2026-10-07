@@ -108,6 +108,7 @@ function App() {
     new URLSearchParams(window.location.search).has('admin') ? 'admin' : 'home'
   )
   const [lightboxIndex, setLightboxIndex] = useState(null)
+  const [lightboxPhotos, setLightboxPhotos] = useState([])
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState('')
@@ -129,6 +130,19 @@ function App() {
       loadArchivedPhotos()
     }
   }, [view, isAdminAuthenticated, adminToken])
+
+  useEffect(() => {
+    if (lightboxIndex === null) return undefined
+
+    function handleLightboxKeyDown(event) {
+      if (event.key === 'Escape') closeLightbox()
+      if (event.key === 'ArrowLeft') moveLightbox(-1)
+      if (event.key === 'ArrowRight') moveLightbox(1)
+    }
+
+    window.addEventListener('keydown', handleLightboxKeyDown)
+    return () => window.removeEventListener('keydown', handleLightboxKeyDown)
+  }, [lightboxIndex, lightboxPhotos])
 
   useEffect(() => {
     if (!uploading) {
@@ -453,7 +467,14 @@ function App() {
                   <span>Elegir</span>
                 </label>
               )}
-              <img src={photo.image_url} alt={`Foto ${index + 1} de ${submission.guest_name || 'invitado'}`} />
+              <button
+                type="button"
+                className="admin-photo-preview"
+                onClick={() => openLightbox(index, submission.photos)}
+                aria-label={`Ampliar foto ${index + 1} de ${submission.guest_name || 'invitado'}`}
+              >
+                <img src={photo.image_url} alt="" />
+              </button>
               <div className="admin-submission-actions">
                 {isPublished ? (
                   <>
@@ -504,12 +525,14 @@ function App() {
     ))
   }
 
-  function openLightbox(index) {
+  function openLightbox(index, photos = publishedPhotos) {
+    setLightboxPhotos(photos)
     setLightboxIndex(index)
   }
 
   function closeLightbox() {
     setLightboxIndex(null)
+    setLightboxPhotos([])
   }
 
   function moveLightbox(direction) {
@@ -519,7 +542,7 @@ function App() {
 
     const nextIndex = Math.min(
       Math.max(lightboxIndex + direction, 0),
-      publishedPhotos.length - 1
+      lightboxPhotos.length - 1
     )
 
     setLightboxIndex(nextIndex)
@@ -830,41 +853,48 @@ function App() {
         )}
       </div>
 
-      {lightboxIndex !== null && publishedPhotos[lightboxIndex] && (
+      {lightboxIndex !== null && lightboxPhotos[lightboxIndex] && (
         <div className="lightbox-overlay" onClick={closeLightbox}>
           <div
             className="lightbox"
             onClick={(event) => event.stopPropagation()}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Foto ampliada"
           >
-            <button type="button" className="lightbox-close" onClick={closeLightbox}>
+            <button type="button" className="lightbox-close" onClick={closeLightbox} aria-label="Cerrar foto ampliada">
               ×
             </button>
 
-            <button
-              type="button"
-              className="nav-button prev"
-              onClick={() => moveLightbox(-1)}
-              aria-label="Anterior"
-            >
-              ‹
-            </button>
+            {lightboxPhotos.length > 1 && (
+              <button
+                type="button"
+                className="nav-button prev"
+                onClick={() => moveLightbox(-1)}
+                aria-label="Anterior"
+              >
+                ‹
+              </button>
+            )}
 
-            <img src={publishedPhotos[lightboxIndex].image_url} alt="Foto ampliada" />
+            <img src={lightboxPhotos[lightboxIndex].image_url} alt="Foto ampliada" />
 
-            <button
-              type="button"
-              className="nav-button next"
-              onClick={() => moveLightbox(1)}
-              aria-label="Siguiente"
-            >
-              ›
-            </button>
+            {lightboxPhotos.length > 1 && (
+              <button
+                type="button"
+                className="nav-button next"
+                onClick={() => moveLightbox(1)}
+                aria-label="Siguiente"
+              >
+                ›
+              </button>
+            )}
 
             <div className="lightbox-meta">
-              <strong>{publishedPhotos[lightboxIndex].guest_name || 'Invitado'}</strong>
-              <p>{publishedPhotos[lightboxIndex].message || 'Recuerdo del bautizo'}</p>
+              <strong>{lightboxPhotos[lightboxIndex].guest_name || 'Invitado'}</strong>
+              <p>{lightboxPhotos[lightboxIndex].message || 'Recuerdo del bautizo'}</p>
             </div>
           </div>
         </div>

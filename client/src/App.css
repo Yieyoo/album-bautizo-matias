@@ -538,6 +538,20 @@
   aspect-ratio: 1;
 }
 
+.admin-photo-preview {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.admin-photo-preview:focus-visible {
+  outline: 3px solid #6586a0;
+  outline-offset: -3px;
+}
+
 .admin-submission-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
