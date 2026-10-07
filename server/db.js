@@ -74,21 +74,19 @@ export async function getPublishedPhotos() {
   return memoryStore.photos.filter((photo) => photo.status === 'published')
 }
 
-export async function getPublishedPhotoById(id) {
+export async function getPhotoById(id) {
   const db = ensureDatabaseConnection()
 
   if (db) {
     await ensureTable()
     const result = await db.query(
-      'SELECT * FROM photos WHERE id = $1 AND status = $2',
-      [id, 'published']
+      'SELECT * FROM photos WHERE id = $1',
+      [id]
     )
     return result.rows[0] ? normalizePhoto(result.rows[0]) : null
   }
 
-  const photo = memoryStore.photos.find(
-    (item) => item.id === id && item.status === 'published'
-  )
+  const photo = memoryStore.photos.find((item) => item.id === id)
   return photo ? normalizePhoto(photo) : null
 }
 

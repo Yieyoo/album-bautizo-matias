@@ -110,6 +110,7 @@ function App() {
   const [lightboxIndex, setLightboxIndex] = useState(null)
   const [lightboxPhotos, setLightboxPhotos] = useState([])
   const [lightboxAllowsDownload, setLightboxAllowsDownload] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState('')
@@ -446,7 +447,7 @@ function App() {
               <button
                 type="button"
                 className="admin-photo-preview"
-                onClick={() => openLightbox(index, submission.photos, isPublished)}
+                onClick={() => openLightbox(index, submission.photos, true)}
                 aria-label={`Ampliar foto ${index + 1} de ${submission.guest_name || 'invitado'}`}
               >
                 <img src={photo.image_url} alt="" />
@@ -498,7 +499,8 @@ function App() {
 
   function openLightbox(index, photos = publishedPhotos, allowDownload = true) {
     setLightboxPhotos(photos)
-    setLightboxAllowsDownload(allowDownload)
+    setLightboxAllowsDownload(allowDownload && isAdminAuthenticated)
+    setDownloadError('')
     setLightboxIndex(index)
   }
 
@@ -506,6 +508,37 @@ function App() {
     setLightboxIndex(null)
     setLightboxPhotos([])
     setLightboxAllowsDownload(false)
+    setDownloadError('')
+  }
+
+  async function downloadLightboxPhoto() {
+    const photo = lightboxPhotos[lightboxIndex]
+    if (!photo || !lightboxAllowsDownload) return
+
+    try {
+      const response = await fetch(
+        isStaticDemo
+          ? photo.image_url
+          : `${apiUrl}/api/photos/${encodeURIComponent(photo.id)}/download`,
+        isStaticDemo ? undefined : { headers: { Authorization: `Bearer ${adminToken}` } }
+      )
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.message || 'No se pudo descargar la foto.')
+      }
+
+      const imageUrl = URL.createObjectURL(await response.blob())
+      const link = document.createElement('a')
+      link.href = imageUrl
+      link.download = `foto-matias-${lightboxIndex + 1}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1000)
+    } catch (error) {
+      console.error('Error downloading photo', error)
+      setDownloadError(error.message || 'No se pudo descargar la foto.')
+    }
   }
 
   function moveLightbox(direction) {
@@ -869,18 +902,12 @@ function App() {
               <strong>{lightboxPhotos[lightboxIndex].guest_name || 'Invitado'}</strong>
               <p>{lightboxPhotos[lightboxIndex].message || 'Recuerdo del bautizo'}</p>
               {lightboxAllowsDownload && (
-                <a
-                  className="lightbox-download"
-                  href={
-                    apiUrl
-                      ? `${apiUrl}/api/photos/${encodeURIComponent(lightboxPhotos[lightboxIndex].id)}/download`
-                      : lightboxPhotos[lightboxIndex].image_url
-                  }
-                  target={apiUrl ? undefined : '_blank'}
-                  rel={apiUrl ? undefined : 'noreferrer'}
-                >
-                  Descargar foto
-                </a>
+                <>
+                  <button type="button" className="lightbox-download" onClick={downloadLightboxPhoto}>
+                    Descargar foto
+                  </button>
+                  {downloadError && <p className="download-error" role="alert">{downloadError}</p>}
+                </>
               )}
             </div>
           </div>

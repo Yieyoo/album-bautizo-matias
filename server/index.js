@@ -6,7 +6,7 @@ import multer from 'multer'
 import {
   createPhotosFromUpload,
   deletePhotoById,
-  getPublishedPhotoById,
+  getPhotoById,
   getPublishedPhotos,
   getPendingPhotos,
   getArchivedPhotos,
@@ -154,10 +154,14 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
 })
 
 app.get('/api/photos/:id/download', async (req, res) => {
+  if (!isAdminAuthenticated(req)) {
+    return res.status(401).json({ message: 'Inicia sesión para descargar fotografías.' })
+  }
+
   try {
-    const photo = await getPublishedPhotoById(req.params.id)
+    const photo = await getPhotoById(req.params.id)
     if (!photo) {
-      return res.status(404).json({ message: 'Foto publicada no encontrada.' })
+      return res.status(404).json({ message: 'Foto no encontrada.' })
     }
 
     const imageUrl = new URL(photo.image_url)

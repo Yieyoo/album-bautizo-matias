@@ -714,14 +714,22 @@
   padding: 10px 14px;
   border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 999px;
+  background: transparent;
   color: #fff;
+  font: inherit;
   font-size: 0.85rem;
   font-weight: 800;
-  text-decoration: none;
+  cursor: pointer;
 }
 
 .lightbox-download:hover {
   background: rgba(255, 255, 255, 0.14);
+}
+
+.download-error {
+  margin: 8px 0 0;
+  color: #ffd7d7;
+  font-size: 0.82rem;
 }
 
 @media (min-width: 768px) {
