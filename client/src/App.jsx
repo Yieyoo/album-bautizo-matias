@@ -403,31 +403,6 @@ function App() {
     }
   }
 
-  async function deletePhoto(id) {
-    if (isStaticDemo) {
-      setPendingPhotos((current) => current.filter((item) => item.id !== id))
-      setPublishedPhotos((current) => current.filter((item) => item.id !== id))
-      setArchivedPhotos((current) => current.filter((item) => item.id !== id))
-      setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
-      return
-    }
-
-    const response = await fetch(`${apiUrl}/api/photos/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${adminToken}` },
-    })
-    if (!response.ok) {
-      const data = await response.json()
-      setAdminError(data.message || 'No se pudo eliminar la fotografía.')
-      return
-    }
-
-    await loadPendingPhotos()
-    await loadPublishedPhotos()
-    await loadArchivedPhotos()
-    setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
-  }
-
   function renderPhotoSubmissions(photos, isPublished = false, isArchived = false) {
     return groupPhotosBySubmission(photos).map((submission) => (
       <article key={submission.id} className="admin-submission">
@@ -498,11 +473,6 @@ function App() {
                       Archivar
                     </button>
                   </>
-                )}
-                {(isPublished || isArchived) && (
-                  <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
-                    Eliminar
-                  </button>
                 )}
               </div>
             </article>
