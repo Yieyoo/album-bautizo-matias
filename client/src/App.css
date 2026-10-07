@@ -95,15 +95,6 @@
   filter: blur(18px);
 }
 
-.cross-mark {
-  position: relative;
-  font-size: 3.1rem;
-  color: #b38b53;
-  line-height: 1;
-  margin-bottom: 10px;
-  text-shadow: 0 8px 18px rgba(179,139,83,0.18);
-}
-
 .eyebrow {
   position: relative;
   margin: 0;
@@ -681,7 +672,7 @@
   inset: 0 0 auto;
   height: 310px;
   background:
-    linear-gradient(180deg, rgba(255, 253, 250, 0.08) 0%, rgba(255, 253, 250, 0.16) 38%, #fffdfa 100%),
+    linear-gradient(180deg, rgba(255, 253, 250, 0.02) 0%, rgba(255, 253, 250, 0.05) 38%, #fffdfa 100%),
     url('https://images.unsplash.com/photo-1566516171511-1c411a59c8ba?auto=format&fit=crop&w=1800&q=85') center 42% / cover;
   filter: none;
 }
@@ -704,14 +695,6 @@
   z-index: 1;
   width: min(100%, 570px);
   margin: 0 auto;
-}
-
-.cross-mark {
-  margin-bottom: 12px;
-  color: #bd9567;
-  font-size: 3.25rem;
-  font-weight: 400;
-  text-shadow: none;
 }
 
 .eyebrow {
@@ -758,7 +741,9 @@
 }
 
 .heart-divider span {
-  font-size: 1.3rem;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -1039,7 +1024,7 @@
   }
 
   .hero-panel {
-    min-height: 620px;
+    min-height: 570px;
     margin-right: -18px;
     margin-left: -18px;
     padding: 116px 18px 20px;
@@ -1052,10 +1037,6 @@
   .hero-panel::after {
     top: 178px;
     height: 170px;
-  }
-
-  .cross-mark {
-    font-size: 2.8rem;
   }
 
   .hero-cta {
@@ -1145,7 +1126,7 @@
   }
 
   .hero-panel {
-    min-height: 650px;
+    min-height: 620px;
     margin-right: -56px;
     margin-left: -56px;
     padding-top: 88px;
@@ -1166,11 +1147,6 @@
 
   .date-line {
     font-size: 1.65rem;
-  }
-
-  .cross-mark {
-    margin-bottom: 8px;
-    font-size: 2.6rem;
   }
 
   .heart-divider {

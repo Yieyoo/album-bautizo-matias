@@ -1,5 +1,5 @@
 :root {
-  font-family: Inter, 'Segoe UI', sans-serif;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: #243549;
@@ -45,4 +45,3 @@ h3,
 p {
   margin-top: 0;
 }
-

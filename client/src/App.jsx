@@ -12,28 +12,21 @@ const fallbackPhotos = [
     guest_name: 'Mamá',
     message: 'Muchas felicidades Matías ❤️',
     image_url:
-      'https://images.unsplash.com/photo-1566516171511-1c411a59c8ba?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'seed-2',
-    guest_name: 'Tío José',
-    message: 'Qué alegría compartir este día contigo.',
-    image_url:
-      'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'seed-3',
-    guest_name: 'Abuela',
-    message: 'Te queremos muchísimo, Matías.',
-    image_url:
       'https://images.unsplash.com/photo-1731743214989-9b4d60937ddf?auto=format&fit=crop&w=900&q=80',
   },
   {
-    id: 'seed-4',
+    id: 'seed-2',
     guest_name: 'Familia',
-    message: 'Gracias por este recuerdo tan especial.',
+    message: 'Un recuerdo muy especial de este día.',
     image_url:
-      'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1787214091915-994e9806ff9d?auto=format&fit=crop&w=900&q=80',
+  },
+  {
+    id: 'seed-3',
+    guest_name: 'Con cariño',
+    message: 'Celebrando juntos a Matías.',
+    image_url:
+      'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=900&q=80',
   },
 ]
 
@@ -350,11 +343,10 @@ function App() {
 
             <section className="hero-panel">
               <div className="hero-copy">
-                <div className="cross-mark" aria-hidden="true">✝</div>
                 <p className="eyebrow">Bautizo de</p>
                 <h1>MATÍAS</h1>
                 <p className="date-line">7 de noviembre</p>
-                <div className="heart-divider" aria-hidden="true"><span>♡</span></div>
+                <div className="heart-divider" aria-hidden="true"><span>†</span></div>
                 <p className="welcome-text">
                   Gracias por acompañarnos
                   <span>en este día tan especial.</span>
