@@ -5,16 +5,29 @@ import express from 'express'
 import multer from 'multer'
 import {
   createPhotosFromUpload,
-  deletePhotoById,
   getPhotoById,
   getPublishedPhotos,
   getPendingPhotos,
   getArchivedPhotos,
   updatePhotoStatus,
 } from './db.js'
-import { uploadBufferToCloudinary } from './cloudinary.js'
+import { isCloudinaryConfigured, uploadBufferToCloudinary } from './cloudinary.js'
 
 dotenv.config()
+
+if (process.env.NODE_ENV === 'production') {
+  const requiredConfiguration = [
+    'DATABASE_URL',
+    'ADMIN_PASSWORD',
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET',
+  ]
+  const missingConfiguration = requiredConfiguration.filter((key) => !process.env[key])
+  if (missingConfiguration.length) {
+    throw new Error(`Missing production configuration: ${missingConfiguration.join(', ')}`)
+  }
+}
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -71,7 +84,7 @@ app.get('/api/event', (req, res) => {
       name: 'Matías',
       type: 'Bautizo',
       date: '7 de noviembre',
-      qrLink: 'https://example.com/bautizo/matias',
+      qrLink: 'https://yieyoo.github.io/album-bautizo-matias/',
       adminPath: '/admin',
     },
   })
@@ -102,6 +115,12 @@ app.get('/api/photos', async (req, res) => {
 })
 
 app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
+  if (!isCloudinaryConfigured()) {
+    return res.status(503).json({
+      message: 'El almacenamiento de fotografías no está configurado; no se guardó ningún archivo.',
+    })
+  }
+
   const files = req.files ?? []
   const guestName = req.body.guestName?.trim() ?? ''
   const message = req.body.message?.trim() ?? ''
@@ -121,21 +140,19 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
   }
 
   try {
-    const uploadedFiles = await Promise.all(
-      files.map(async (file) => {
-        const publicId = `matias-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-        const uploadResult = await uploadBufferToCloudinary(
-          file.buffer,
-          file.mimetype,
-          publicId
-        )
-
-        return {
-          image_url: uploadResult.secure_url,
-          cloudinary_public_id: uploadResult.public_id || publicId,
-        }
+    const uploadedFiles = []
+    for (const file of files) {
+      const publicId = `matias-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const uploadResult = await uploadBufferToCloudinary(
+        file.buffer,
+        file.mimetype,
+        publicId
+      )
+      uploadedFiles.push({
+        image_url: uploadResult.secure_url,
+        cloudinary_public_id: uploadResult.public_id || publicId,
       })
-    )
+    }
 
     const createdPhotos = await createPhotosFromUpload(
       uploadedFiles,
@@ -225,26 +242,6 @@ app.patch('/api/photos/:id', async (req, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: 'No se pudo actualizar la foto.' })
-  }
-})
-
-app.delete('/api/photos/:id', async (req, res) => {
-  if (!isAdminAuthenticated(req)) {
-    return res.status(401).json({ message: 'Inicia sesión para eliminar fotografías.' })
-  }
-
-  const { id } = req.params
-
-  try {
-    const deleted = await deletePhotoById(id)
-    if (!deleted) {
-      return res.status(404).json({ message: 'Foto no encontrada.' })
-    }
-
-    res.json({ message: 'Foto eliminada.' })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: 'No se pudo eliminar la foto.' })
   }
 })
 

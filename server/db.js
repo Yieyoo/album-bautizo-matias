@@ -8,12 +8,18 @@ const memoryStore = {
 }
 
 let pool = null
+let tableInitialization = null
 
 function ensureDatabaseConnection() {
   if (!process.env.DATABASE_URL) return null
 
   if (!pool) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL })
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 3,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 10000,
+    })
   }
 
   return pool
@@ -23,26 +29,35 @@ async function ensureTable() {
   const db = ensureDatabaseConnection()
   if (!db) return
 
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS photos (
-      id UUID PRIMARY KEY,
-      event_id TEXT NOT NULL,
-      guest_name TEXT,
-      message TEXT,
-      image_url TEXT NOT NULL,
-      cloudinary_public_id TEXT,
-      submission_id UUID,
-      status TEXT NOT NULL DEFAULT 'pending',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-  `)
-  await db.query(
-    'ALTER TABLE photos ADD COLUMN IF NOT EXISTS submission_id UUID'
-  )
-  await db.query(
-    'UPDATE photos SET status = $1 WHERE status = $2',
-    ['published', 'approved']
-  )
+  if (!tableInitialization) {
+    tableInitialization = (async () => {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS photos (
+          id UUID PRIMARY KEY,
+          event_id TEXT NOT NULL,
+          guest_name TEXT,
+          message TEXT,
+          image_url TEXT NOT NULL,
+          cloudinary_public_id TEXT,
+          submission_id UUID,
+          status TEXT NOT NULL DEFAULT 'pending',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `)
+      await db.query(
+        'ALTER TABLE photos ADD COLUMN IF NOT EXISTS submission_id UUID'
+      )
+      await db.query(
+        'UPDATE photos SET status = $1 WHERE status = $2',
+        ['published', 'approved']
+      )
+    })()
+    tableInitialization.catch(() => {
+      tableInitialization = null
+    })
+  }
+
+  await tableInitialization
 }
 
 function normalizePhoto(photo) {
@@ -191,18 +206,4 @@ export async function updatePhotoStatus(id, status) {
   }
 
   return normalizePhoto(memoryStore.photos[photoIndex])
-}
-
-export async function deletePhotoById(id) {
-  const db = ensureDatabaseConnection()
-
-  if (db) {
-    await ensureTable()
-    const result = await db.query('DELETE FROM photos WHERE id = $1 RETURNING *', [id])
-    return result.rows.length > 0
-  }
-
-  const before = memoryStore.photos.length
-  memoryStore.photos = memoryStore.photos.filter((photo) => photo.id !== id)
-  return before !== memoryStore.photos.length
 }
