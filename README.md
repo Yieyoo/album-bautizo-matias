@@ -6,7 +6,7 @@
 
 ## Publicación en GitHub Pages
 
-El workflow `.github/workflows/pages.yml` compila `client/` y publica el resultado al hacer push a `main`.
+El workflow `.github/workflows/pages.yml` compila `client/` y publica el resultado al hacer push a `main` cuando cambia `client/`, este README o el workflow.
 En **Settings → Pages**, selecciona **GitHub Actions** como fuente de publicación.
 
 ## Demo y servidor
