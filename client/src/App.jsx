@@ -601,7 +601,7 @@ function App() {
                   placeholder="••••••••"
                 />
                 {adminError && <p className="status-message error-message">{adminError}</p>}
-                <button type="submit" className="primary-button" disabled={isStaticDemo}>
+                <button type="submit" className="primary-button">
                   Iniciar sesión
                 </button>
               </form>
