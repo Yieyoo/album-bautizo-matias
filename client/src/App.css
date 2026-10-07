@@ -471,6 +471,14 @@
   gap: 10px;
 }
 
+.submission-tools {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
 .admin-photo-copy {
   display: flex;
   flex-direction: column;
@@ -490,13 +498,31 @@
 }
 
 .submission-count {
-  flex: 0 0 auto;
   padding: 5px 9px;
   border-radius: 999px;
   background: #e7eef4;
   color: #526d82;
   font-size: 0.74rem;
   font-weight: 700;
+}
+
+.select-all-photos,
+.photo-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #526d82;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.select-all-photos input,
+.photo-select input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #6586a0;
 }
 
 .admin-submission-grid {
@@ -506,11 +532,23 @@
 }
 
 .admin-submission-photo {
+  position: relative;
   min-width: 0;
   overflow: hidden;
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(154, 167, 181, 0.22);
+}
+
+.photo-select {
+  position: absolute;
+  z-index: 1;
+  top: 7px;
+  left: 7px;
+  padding: 5px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 8px rgba(25, 42, 56, 0.18);
 }
 
 .admin-submission-photo img {
@@ -546,6 +584,40 @@
 }
 
 .admin-submission-actions .danger {
+  background: #f5e0df;
+  color: #8a3e3e;
+}
+
+.submission-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(154, 167, 181, 0.22);
+}
+
+.submission-bulk-actions span {
+  flex: 1 0 100%;
+  color: #526d82;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.submission-bulk-actions button {
+  flex: 1;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 8px;
+  background: #dfeaf5;
+  color: #24415e;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.submission-bulk-actions .danger {
   background: #f5e0df;
   color: #8a3e3e;
 }

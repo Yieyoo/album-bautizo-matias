@@ -90,6 +90,7 @@ function App() {
   const [adminToken, setAdminToken] = useState('')
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
   const [adminError, setAdminError] = useState('')
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState([])
   const fileInputRef = useRef(null)
   const touchStartX = useRef(null)
 
@@ -267,10 +268,10 @@ function App() {
     }
   }
 
-  async function updatePhotoStatus(id, status) {
+  async function updatePhotoStatus(id, status, refresh = true) {
     if (isStaticDemo) {
       const photo = [...pendingPhotos, ...publishedPhotos].find((item) => item.id === id)
-      if (!photo) return
+      if (!photo) return false
 
       setPendingPhotos((current) => current.filter((item) => item.id !== id))
       setPublishedPhotos((current) => current.filter((item) => item.id !== id))
@@ -279,7 +280,8 @@ function App() {
       } else if (status === 'published') {
         setPublishedPhotos((current) => [{ ...photo, status }, ...current])
       }
-      return
+      setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
+      return true
     }
 
     const response = await fetch(`${apiUrl}/api/photos/${id}`, {
@@ -293,17 +295,55 @@ function App() {
     if (!response.ok) {
       const data = await response.json()
       setAdminError(data.message || 'No se pudo actualizar la fotografía.')
-      return
+      return false
     }
 
-    await loadPendingPhotos()
-    await loadPublishedPhotos()
+    setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
+    if (refresh) {
+      await loadPendingPhotos()
+      await loadPublishedPhotos()
+    }
+    return true
+  }
+
+  function togglePhotoSelection(photoId) {
+    setSelectedPhotoIds((current) => (
+      current.includes(photoId)
+        ? current.filter((id) => id !== photoId)
+        : [...current, photoId]
+    ))
+  }
+
+  function toggleSubmissionSelection(photos) {
+    const photoIds = photos.map((photo) => photo.id)
+    const allSelected = photoIds.every((id) => selectedPhotoIds.includes(id))
+    setSelectedPhotoIds((current) => (
+      allSelected
+        ? current.filter((id) => !photoIds.includes(id))
+        : [...new Set([...current, ...photoIds])]
+    ))
+  }
+
+  async function moderateSelectedPhotos(photos, status) {
+    const selected = photos.filter((photo) => selectedPhotoIds.includes(photo.id))
+    if (!selected.length) return
+
+    setAdminError('')
+    const results = await Promise.all(
+      selected.map((photo) => updatePhotoStatus(photo.id, status, false))
+    )
+
+    if (results.some(Boolean) && !isStaticDemo) {
+      await loadPendingPhotos()
+      await loadPublishedPhotos()
+    }
   }
 
   async function deletePhoto(id) {
     if (isStaticDemo) {
       setPendingPhotos((current) => current.filter((item) => item.id !== id))
       setPublishedPhotos((current) => current.filter((item) => item.id !== id))
+      setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
       return
     }
 
@@ -319,6 +359,7 @@ function App() {
 
     await loadPendingPhotos()
     await loadPublishedPhotos()
+    setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
   }
 
   function renderPhotoSubmissions(photos, isPublished = false) {
@@ -329,13 +370,37 @@ function App() {
             <strong>{submission.guest_name || 'Invitado'}</strong>
             <p>{submission.message || 'Sin mensaje'}</p>
           </div>
-          <span className="submission-count">
-            {submission.photos.length} {submission.photos.length === 1 ? 'foto' : 'fotos'}
-          </span>
+          <div className="submission-tools">
+            <span className="submission-count">
+              {submission.photos.length} {submission.photos.length === 1 ? 'foto' : 'fotos'}
+            </span>
+            {!isPublished && (
+              <label className="select-all-photos">
+                <input
+                  type="checkbox"
+                  checked={submission.photos.every((photo) => selectedPhotoIds.includes(photo.id))}
+                  onChange={() => toggleSubmissionSelection(submission.photos)}
+                  aria-label={`Seleccionar todas las fotos de ${submission.guest_name || 'invitado'}`}
+                />
+                Todas
+              </label>
+            )}
+          </div>
         </header>
         <div className="admin-submission-grid">
           {submission.photos.map((photo, index) => (
             <article key={photo.id} className="admin-submission-photo">
+              {!isPublished && (
+                <label className="photo-select">
+                  <input
+                    type="checkbox"
+                    checked={selectedPhotoIds.includes(photo.id)}
+                    onChange={() => togglePhotoSelection(photo.id)}
+                    aria-label={`Seleccionar foto ${index + 1} de ${submission.guest_name || 'invitado'}`}
+                  />
+                  <span>Elegir</span>
+                </label>
+              )}
               <img src={photo.image_url} alt={`Foto ${index + 1} de ${submission.guest_name || 'invitado'}`} />
               <div className="admin-submission-actions">
                 {isPublished ? (
@@ -359,6 +424,19 @@ function App() {
             </article>
           ))}
         </div>
+        {!isPublished && selectedPhotoIds.some((id) => submission.photos.some((photo) => photo.id === id)) && (
+          <div className="submission-bulk-actions">
+            <span>
+              {submission.photos.filter((photo) => selectedPhotoIds.includes(photo.id)).length} seleccionadas
+            </span>
+            <button type="button" onClick={() => moderateSelectedPhotos(submission.photos, 'published')}>
+              Publicar seleccionadas
+            </button>
+            <button type="button" className="danger" onClick={() => moderateSelectedPhotos(submission.photos, 'rejected')}>
+              Rechazar seleccionadas
+            </button>
+          </div>
+        )}
       </article>
     ))
   }
