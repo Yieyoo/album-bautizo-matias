@@ -5,7 +5,35 @@ import './App.css'
 const validImageTypes = ['image/jpeg', 'image/png', 'image/webp']
 const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 const isStaticDemo = import.meta.env.PROD && !apiUrl
+const demoAdminPassword = 'matias2026'
 const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}`
+
+const demoPendingPhotos = [
+  {
+    id: 'demo-pending-1',
+    guest_name: 'Tía Mariana',
+    message: 'Un día muy especial para toda la familia. ¡Te queremos, Matías!',
+    image_url: 'https://images.unsplash.com/photo-1731743214989-9b4d60937ddf?auto=format&fit=crop&w=900&q=80',
+    status: 'pending',
+  },
+  {
+    id: 'demo-pending-2',
+    guest_name: 'Abuelita',
+    message: 'Que Dios te acompañe y bendiga siempre.',
+    image_url: 'https://images.unsplash.com/photo-1787214091915-994e9806ff9d?auto=format&fit=crop&w=900&q=80',
+    status: 'pending',
+  },
+]
+
+const demoPublishedPhotos = [
+  {
+    id: 'demo-published-1',
+    guest_name: 'Familia García',
+    message: 'Celebrando juntos este hermoso día.',
+    image_url: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=900&q=80',
+    status: 'published',
+  },
+]
 
 function App() {
   const [publishedPhotos, setPublishedPhotos] = useState([])
@@ -24,7 +52,6 @@ function App() {
   const [adminToken, setAdminToken] = useState('')
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
   const [adminError, setAdminError] = useState('')
-  const [showFloatingUpload, setShowFloatingUpload] = useState(false)
   const fileInputRef = useRef(null)
   const touchStartX = useRef(null)
 
@@ -37,29 +64,6 @@ function App() {
       loadPendingPhotos()
     }
   }, [view, isAdminAuthenticated, adminToken])
-
-  useEffect(() => {
-    if (view !== 'home') {
-      setShowFloatingUpload(false)
-      return undefined
-    }
-
-    const hero = document.querySelector('.hero-panel')
-    const footer = document.querySelector('.site-footer')
-    if (!hero || !footer) {
-      return undefined
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      const heroVisible = entries.find((entry) => entry.target === hero)?.isIntersecting
-      const footerVisible = entries.find((entry) => entry.target === footer)?.isIntersecting
-      setShowFloatingUpload(!heroVisible && !footerVisible)
-    })
-    observer.observe(hero)
-    observer.observe(footer)
-
-    return () => observer.disconnect()
-  }, [view])
 
   useEffect(() => {
     if (!uploading) {
@@ -192,7 +196,16 @@ function App() {
 
     try {
       if (isStaticDemo) {
-        throw new Error('El panel familiar requiere el servidor del álbum.')
+        if (adminPassword !== demoAdminPassword) {
+          throw new Error('Contraseña incorrecta. Usa la clave de demostración indicada.')
+        }
+
+        setPendingPhotos(demoPendingPhotos)
+        setPublishedPhotos(demoPublishedPhotos)
+        setIsAdminAuthenticated(true)
+        setAdminPassword('')
+        setAdminError('')
+        return
       }
 
       const response = await fetch(`${apiUrl}/api/admin/login`, {
@@ -217,6 +230,20 @@ function App() {
   }
 
   async function updatePhotoStatus(id, status) {
+    if (isStaticDemo) {
+      const photo = [...pendingPhotos, ...publishedPhotos].find((item) => item.id === id)
+      if (!photo) return
+
+      setPendingPhotos((current) => current.filter((item) => item.id !== id))
+      setPublishedPhotos((current) => current.filter((item) => item.id !== id))
+      if (status === 'pending') {
+        setPendingPhotos((current) => [{ ...photo, status }, ...current])
+      } else if (status === 'published') {
+        setPublishedPhotos((current) => [{ ...photo, status }, ...current])
+      }
+      return
+    }
+
     const response = await fetch(`${apiUrl}/api/photos/${id}`, {
       method: 'PATCH',
       headers: {
@@ -237,10 +264,6 @@ function App() {
 
   async function deletePhoto(id) {
     if (isStaticDemo) {
-      const photo = pendingPhotos.find((item) => item.id === id)
-      if (photo?.image_url.startsWith('blob:')) {
-        URL.revokeObjectURL(photo.image_url)
-      }
       setPendingPhotos((current) => current.filter((item) => item.id !== id))
       setPublishedPhotos((current) => current.filter((item) => item.id !== id))
       return
@@ -349,7 +372,7 @@ function App() {
                   <span className="button-chevron" aria-hidden="true">›</span>
                 </button>
 
-                {publishedPhotos.length > 0 && (
+                {!isStaticDemo && publishedPhotos.length > 0 && (
                   <button type="button" className="secondary-link" onClick={scrollToGallery}>
                     <span aria-hidden="true">↓</span> Ver recuerdos
                   </button>
@@ -376,7 +399,7 @@ function App() {
               </button>
             </div>
 
-            {publishedPhotos.length > 0 ? (
+            {!isStaticDemo && publishedPhotos.length > 0 ? (
               <section className="gallery-section" id="gallery">
                 <div className="gallery-heading">
                   <div className="title-divider" aria-hidden="true" />
@@ -424,18 +447,6 @@ function App() {
                 Acceso familiar
               </button>
             </footer>
-
-            {showFloatingUpload && (
-              <div className="floating-upload">
-                <button type="button" className="floating-upload-button" onClick={() => setView('upload')}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 7h3l1.4-2h7.2L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" />
-                    <circle cx="12" cy="13" r="4" />
-                  </svg>
-                  Subir fotos
-                </button>
-              </div>
-            )}
 
           </main>
         )}
@@ -575,9 +586,11 @@ function App() {
               <form className="admin-login" onSubmit={handleAdminLogin}>
                 <h2>Administrador</h2>
                 {isStaticDemo && (
-                  <p className="status-message">
-                    El panel se activará cuando el sitio esté conectado al servidor familiar.
-                  </p>
+                  <div className="demo-notice">
+                    <strong>Vista previa del panel</strong>
+                    <span>Contraseña de demostración: <code>matias2026</code></span>
+                    <span>Incluye fotos de ejemplo. No guarda cambios ni afecta el álbum público.</span>
+                  </div>
                 )}
                 <label htmlFor="adminPassword">Contraseña</label>
                 <input
@@ -595,6 +608,11 @@ function App() {
             ) : (
               <section className="admin-panel">
                 <h2>Fotos pendientes</h2>
+                {isStaticDemo && (
+                  <div className="demo-notice">
+                    Modo demostración: estas fotos y acciones son de ejemplo y solo duran en esta sesión.
+                  </div>
+                )}
                 {adminError && <p className="status-message error-message">{adminError}</p>}
                 {pendingPhotos.length ? (
                   pendingPhotos.map((photo) => (

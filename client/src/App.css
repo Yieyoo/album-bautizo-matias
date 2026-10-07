@@ -417,6 +417,29 @@
   gap: 12px;
 }
 
+.demo-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid rgba(101, 134, 160, 0.22);
+  border-radius: 14px;
+  background: #f1f6fa;
+  color: #526d82;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.demo-notice strong {
+  color: #3f5b72;
+}
+
+.demo-notice code {
+  font-family: inherit;
+  font-weight: 800;
+  color: #324b60;
+}
+
 .admin-panel {
   display: flex;
   flex-direction: column;
@@ -755,8 +778,7 @@
   font-weight: 600;
 }
 
-.hero-cta svg,
-.floating-upload-button svg {
+.hero-cta svg {
   width: 30px;
   height: 30px;
   flex: 0 0 auto;
@@ -972,41 +994,6 @@
   padding: 8px 0;
 }
 
-.floating-upload {
-  position: fixed;
-  z-index: 8;
-  right: 16px;
-  bottom: 98px;
-  left: 16px;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.floating-upload-button {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: min(100%, 320px);
-  min-height: 66px;
-  padding: 12px 24px;
-  border: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #829fb5 0%, #6586a0 100%);
-  color: white;
-  box-shadow: 0 12px 28px rgba(82, 108, 129, 0.24);
-  font-size: 1.25rem;
-  font-weight: 700;
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.floating-upload-button svg {
-  position: absolute;
-  left: 24px;
-}
-
 .upload-screen,
 .confirm-screen,
 .admin-screen {
@@ -1117,15 +1104,6 @@
     border-radius: 14px;
   }
 
-  .floating-upload {
-    bottom: 20px;
-    margin-top: -60px;
-  }
-
-  .floating-upload-button {
-    min-height: 60px;
-    font-size: 1.12rem;
-  }
 }
 
 @media (min-width: 768px) {

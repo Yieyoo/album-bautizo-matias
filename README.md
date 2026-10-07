@@ -13,7 +13,11 @@ En **Settings → Pages**, selecciona **GitHub Actions** como fuente de publicac
 
 El formulario conserva los campos **Nombre (opcional)** y **Mensaje (opcional)** junto con las fotografías. Con el servidor configurado, cada envío se guarda con estado `pending`; la familia puede publicarlo, rechazarlo o eliminarlo desde el acceso familiar discreto al final de la página. También puede retirar o eliminar fotografías ya publicadas. El álbum público consulta únicamente fotografías con estado `published`; nombre y mensaje aparecen con la fotografía solo después de publicarla.
 
-GitHub Pages es estático: su demo no puede almacenar ni compartir las cargas entre invitados o dispositivos. Sin servidor conectado, el álbum muestra un aviso de que las fotografías están en revisión y no simula que los envíos llegaron a la familia; el acceso familiar también queda desactivado. Para activar el flujo compartido, despliega el servidor Express y configura Cloudinary, PostgreSQL y `ADMIN_PASSWORD` según `server/.env.example`. Después, añade `VITE_API_URL` como variable del repositorio en GitHub con la URL HTTPS del backend y vuelve a desplegar Pages.
+GitHub Pages es estático: su demo no puede almacenar ni compartir las cargas entre invitados o dispositivos. Sin servidor conectado, el álbum muestra un aviso de que las fotografías están en revisión y no simula que los envíos llegaron a la familia. El acceso familiar ofrece un panel de demostración con contraseña `matias2026` y fotografías de ejemplo; no es una autenticación segura y sus acciones no se guardan ni afectan el álbum público. No reutilices esa contraseña para un panel real.
+
+Para abrir la vista previa del acceso familiar directamente, visita <https://yieyoo.github.io/album-bautizo-matias/?admin>.
+
+Para activar el flujo compartido, despliega el servidor Express y configura Cloudinary, PostgreSQL y una contraseña segura mediante `ADMIN_PASSWORD` según `server/.env.example`. Después, añade `VITE_API_URL` como variable del repositorio en GitHub con la URL HTTPS del backend y vuelve a desplegar Pages.
 
 ## Desarrollo local
 
