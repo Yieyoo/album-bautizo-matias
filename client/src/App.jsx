@@ -109,6 +109,7 @@ function App() {
   )
   const [lightboxIndex, setLightboxIndex] = useState(null)
   const [lightboxPhotos, setLightboxPhotos] = useState([])
+  const [lightboxAllowsDownload, setLightboxAllowsDownload] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState('')
@@ -445,7 +446,7 @@ function App() {
               <button
                 type="button"
                 className="admin-photo-preview"
-                onClick={() => openLightbox(index, submission.photos)}
+                onClick={() => openLightbox(index, submission.photos, isPublished)}
                 aria-label={`Ampliar foto ${index + 1} de ${submission.guest_name || 'invitado'}`}
               >
                 <img src={photo.image_url} alt="" />
@@ -495,14 +496,16 @@ function App() {
     ))
   }
 
-  function openLightbox(index, photos = publishedPhotos) {
+  function openLightbox(index, photos = publishedPhotos, allowDownload = true) {
     setLightboxPhotos(photos)
+    setLightboxAllowsDownload(allowDownload)
     setLightboxIndex(index)
   }
 
   function closeLightbox() {
     setLightboxIndex(null)
     setLightboxPhotos([])
+    setLightboxAllowsDownload(false)
   }
 
   function moveLightbox(direction) {
@@ -865,18 +868,20 @@ function App() {
             <div className="lightbox-meta">
               <strong>{lightboxPhotos[lightboxIndex].guest_name || 'Invitado'}</strong>
               <p>{lightboxPhotos[lightboxIndex].message || 'Recuerdo del bautizo'}</p>
-              <a
-                className="lightbox-download"
-                href={
-                  apiUrl
-                    ? `${apiUrl}/api/photos/${encodeURIComponent(lightboxPhotos[lightboxIndex].id)}/download`
-                    : lightboxPhotos[lightboxIndex].image_url
-                }
-                target={apiUrl ? undefined : '_blank'}
-                rel={apiUrl ? undefined : 'noreferrer'}
-              >
-                Descargar foto
-              </a>
+              {lightboxAllowsDownload && (
+                <a
+                  className="lightbox-download"
+                  href={
+                    apiUrl
+                      ? `${apiUrl}/api/photos/${encodeURIComponent(lightboxPhotos[lightboxIndex].id)}/download`
+                      : lightboxPhotos[lightboxIndex].image_url
+                  }
+                  target={apiUrl ? undefined : '_blank'}
+                  rel={apiUrl ? undefined : 'noreferrer'}
+                >
+                  Descargar foto
+                </a>
+              )}
             </div>
           </div>
         </div>
