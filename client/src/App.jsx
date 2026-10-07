@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import QRCode from 'react-qr-code'
 import './App.css'
 
@@ -123,10 +123,22 @@ function App() {
   const [submissionSaveErrors, setSubmissionSaveErrors] = useState({})
   const fileInputRef = useRef(null)
   const touchStartX = useRef(null)
+  const adminScreenRef = useRef(null)
+  const adminPasswordRef = useRef(null)
 
   useEffect(() => {
     loadPublishedPhotos()
   }, [])
+
+  useLayoutEffect(() => {
+    if (view !== 'admin') return
+
+    window.scrollTo({ top: 0, behavior: 'auto' })
+    adminScreenRef.current?.scrollIntoView({ block: 'start' })
+    if (!isAdminAuthenticated) {
+      window.setTimeout(() => adminPasswordRef.current?.focus({ preventScroll: true }), 250)
+    }
+  }, [view, isAdminAuthenticated])
 
   useEffect(() => {
     if (view === 'admin' && isAdminAuthenticated) {
@@ -751,7 +763,14 @@ function App() {
             </div>
 
             <footer className="site-footer">
-              <button type="button" className="family-access" onClick={() => setView('admin')}>
+              <button
+                type="button"
+                className="family-access"
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'auto' })
+                  setView('admin')
+                }}
+              >
                 Acceso familiar
               </button>
             </footer>
@@ -883,7 +902,7 @@ function App() {
         )}
 
         {view === 'admin' && (
-          <main className="screen admin-screen">
+          <main className="screen admin-screen" ref={adminScreenRef}>
             <div className="panel-header admin-header">
               <button type="button" className="back-link" onClick={() => setView('home')}>
                 ← Volver
@@ -896,6 +915,7 @@ function App() {
                 <label htmlFor="adminPassword">Contraseña</label>
                 <input
                   id="adminPassword"
+                  ref={adminPasswordRef}
                   type="password"
                   value={adminPassword}
                   onChange={(event) => setAdminPassword(event.target.value)}
