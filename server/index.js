@@ -6,6 +6,7 @@ import multer from 'multer'
 import {
   createPhotosFromUpload,
   deletePhotoById,
+  getPublishedPhotoById,
   getPublishedPhotos,
   getPendingPhotos,
   getArchivedPhotos,
@@ -149,6 +150,52 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: 'No se pudieron guardar tus fotos.' })
+  }
+})
+
+app.get('/api/photos/:id/download', async (req, res) => {
+  try {
+    const photo = await getPublishedPhotoById(req.params.id)
+    if (!photo) {
+      return res.status(404).json({ message: 'Foto publicada no encontrada.' })
+    }
+
+    const imageUrl = new URL(photo.image_url)
+    const isAllowedHost =
+      imageUrl.protocol === 'https:' &&
+      (imageUrl.hostname === 'images.unsplash.com' ||
+        imageUrl.hostname.endsWith('.res.cloudinary.com'))
+    if (!isAllowedHost) {
+      return res.status(502).json({ message: 'No se pudo descargar la foto.' })
+    }
+
+    const imageResponse = await fetch(imageUrl)
+    if (!imageResponse.ok) {
+      throw new Error(`Image provider returned ${imageResponse.status}`)
+    }
+
+    const contentType = imageResponse.headers.get('content-type')?.split(';')[0]
+    const extensions = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    }
+    const extension = extensions[contentType]
+    if (!extension) {
+      return res.status(502).json({ message: 'El archivo no es una fotografía válida.' })
+    }
+
+    const image = Buffer.from(await imageResponse.arrayBuffer())
+    res.set({
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="foto-matias.${extension}"`,
+      'Content-Length': image.length,
+      'Cache-Control': 'private, no-store',
+    })
+    res.send(image)
+  } catch (error) {
+    console.error('Error downloading published photo', error)
+    res.status(502).json({ message: 'No se pudo descargar la foto.' })
   }
 })
 

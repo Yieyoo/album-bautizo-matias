@@ -865,6 +865,18 @@ function App() {
             <div className="lightbox-meta">
               <strong>{lightboxPhotos[lightboxIndex].guest_name || 'Invitado'}</strong>
               <p>{lightboxPhotos[lightboxIndex].message || 'Recuerdo del bautizo'}</p>
+              <a
+                className="lightbox-download"
+                href={
+                  apiUrl
+                    ? `${apiUrl}/api/photos/${encodeURIComponent(lightboxPhotos[lightboxIndex].id)}/download`
+                    : lightboxPhotos[lightboxIndex].image_url
+                }
+                target={apiUrl ? undefined : '_blank'}
+                rel={apiUrl ? undefined : 'noreferrer'}
+              >
+                Descargar foto
+              </a>
             </div>
           </div>
         </div>
