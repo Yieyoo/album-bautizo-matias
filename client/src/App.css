@@ -280,9 +280,13 @@
 }
 
 .upload-button {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   text-decoration: none;
+  background: linear-gradient(135deg, #829fb5 0%, #6586a0 100%);
+  box-shadow: 0 14px 24px rgba(82, 108, 129, 0.22);
 }
 
 .selected-grid {
@@ -980,22 +984,27 @@
 }
 
 .floating-upload-button {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
   width: min(100%, 320px);
   min-height: 66px;
   padding: 12px 24px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #e1b169, #c89450);
+  background: linear-gradient(135deg, #829fb5 0%, #6586a0 100%);
   color: white;
-  box-shadow: 0 12px 28px rgba(153, 107, 52, 0.3);
+  box-shadow: 0 12px 28px rgba(82, 108, 129, 0.24);
   font-size: 1.25rem;
   font-weight: 700;
   cursor: pointer;
   pointer-events: auto;
+}
+
+.floating-upload-button svg {
+  position: absolute;
+  left: 24px;
 }
 
 .upload-screen,
