@@ -1,3 +1,4 @@
+import { randomBytes, timingSafeEqual } from 'node:crypto'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
@@ -5,7 +6,7 @@ import multer from 'multer'
 import {
   createPhotosFromUpload,
   deletePhotoById,
-  getApprovedPhotos,
+  getPublishedPhotos,
   getPendingPhotos,
   updatePhotoStatus,
 } from './db.js'
@@ -15,6 +16,7 @@ dotenv.config()
 
 const app = express()
 const port = process.env.PORT || 4000
+const adminSessions = new Map()
 
 app.use(cors())
 app.use(express.json({ limit: '30mb' }))
@@ -28,6 +30,37 @@ const upload = multer({
 })
 
 const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp']
+
+function isAdminAuthenticated(req) {
+  const token = req.get('authorization')?.replace(/^Bearer\s+/i, '')
+  const expiresAt = token ? adminSessions.get(token) : undefined
+  if (!expiresAt || expiresAt <= Date.now()) {
+    if (token) adminSessions.delete(token)
+    return false
+  }
+  return true
+}
+
+app.post('/api/admin/login', (req, res) => {
+  const configuredPassword = process.env.ADMIN_PASSWORD
+  if (!configuredPassword) {
+    return res.status(503).json({ message: 'El acceso familiar no está configurado.' })
+  }
+
+  const submittedPassword = Buffer.from(String(req.body.password ?? ''))
+  const expectedPassword = Buffer.from(configuredPassword)
+  const matches =
+    submittedPassword.length === expectedPassword.length &&
+    timingSafeEqual(submittedPassword, expectedPassword)
+
+  if (!matches) {
+    return res.status(401).json({ message: 'Contraseña incorrecta. Intenta de nuevo.' })
+  }
+
+  const token = randomBytes(32).toString('hex')
+  adminSessions.set(token, Date.now() + 8 * 60 * 60 * 1000)
+  res.json({ token })
+})
 
 app.get('/api/event', (req, res) => {
   res.json({
@@ -43,11 +76,14 @@ app.get('/api/event', (req, res) => {
 })
 
 app.get('/api/photos', async (req, res) => {
-  const status = req.query.status === 'pending' ? 'pending' : 'approved'
+  const status = req.query.status === 'pending' ? 'pending' : 'published'
+  if (status === 'pending' && !isAdminAuthenticated(req)) {
+    return res.status(401).json({ message: 'Inicia sesión para revisar fotos pendientes.' })
+  }
 
   try {
     const photos =
-      status === 'pending' ? await getPendingPhotos() : await getApprovedPhotos()
+      status === 'pending' ? await getPendingPhotos() : await getPublishedPhotos()
 
     res.json({ photos })
   } catch (error) {
@@ -58,8 +94,8 @@ app.get('/api/photos', async (req, res) => {
 
 app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
   const files = req.files ?? []
-  const guestName = req.body.guestName ?? ''
-  const message = req.body.message ?? ''
+  const guestName = req.body.guestName?.trim() ?? ''
+  const message = req.body.message?.trim() ?? ''
 
   if (!files.length) {
     return res.status(400).json({ message: 'Debes seleccionar al menos una foto.' })
@@ -99,7 +135,7 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
     )
 
     res.status(201).json({
-      message: 'Tus fotografías se enviaron correctamente.',
+      message: 'Tus fotografías quedaron pendientes de revisión familiar.',
       photos: createdPhotos,
     })
   } catch (error) {
@@ -109,10 +145,14 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
 })
 
 app.patch('/api/photos/:id', async (req, res) => {
+  if (!isAdminAuthenticated(req)) {
+    return res.status(401).json({ message: 'Inicia sesión para moderar fotografías.' })
+  }
+
   const { id } = req.params
   const { status } = req.body
 
-  if (!['approved', 'pending', 'rejected'].includes(status)) {
+  if (!['published', 'pending', 'rejected'].includes(status)) {
     return res.status(400).json({ message: 'Estado no válido.' })
   }
 
@@ -130,6 +170,10 @@ app.patch('/api/photos/:id', async (req, res) => {
 })
 
 app.delete('/api/photos/:id', async (req, res) => {
+  if (!isAdminAuthenticated(req)) {
+    return res.status(401).json({ message: 'Inicia sesión para eliminar fotografías.' })
+  }
+
   const { id } = req.params
 
   try {

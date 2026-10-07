@@ -11,7 +11,7 @@ const basePhotoTemplate = [
     image_url:
       'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=900&q=80',
     cloudinary_public_id: 'seed-1',
-    status: 'approved',
+    status: 'published',
     created_at: new Date().toISOString(),
   },
   {
@@ -21,7 +21,7 @@ const basePhotoTemplate = [
     image_url:
       'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=900&q=80',
     cloudinary_public_id: 'seed-2',
-    status: 'approved',
+    status: 'published',
     created_at: new Date().toISOString(),
   },
   {
@@ -31,7 +31,7 @@ const basePhotoTemplate = [
     image_url:
       'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=900&q=80',
     cloudinary_public_id: 'seed-3',
-    status: 'approved',
+    status: 'published',
     created_at: new Date().toISOString(),
   },
   {
@@ -41,7 +41,7 @@ const basePhotoTemplate = [
     image_url:
       'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=80',
     cloudinary_public_id: 'seed-4',
-    status: 'approved',
+    status: 'published',
     created_at: new Date().toISOString(),
   },
 ]
@@ -81,6 +81,10 @@ async function ensureTable() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `)
+  await db.query(
+    'UPDATE photos SET status = $1 WHERE status = $2',
+    ['published', 'approved']
+  )
 }
 
 function normalizePhoto(photo) {
@@ -96,19 +100,19 @@ function normalizePhoto(photo) {
   }
 }
 
-export async function getApprovedPhotos() {
+export async function getPublishedPhotos() {
   const db = ensureDatabaseConnection()
 
   if (db) {
     await ensureTable()
     const result = await db.query(
       'SELECT * FROM photos WHERE status = $1 ORDER BY created_at DESC',
-      ['approved']
+      ['published']
     )
     return result.rows.map(normalizePhoto)
   }
 
-  return memoryStore.photos.filter((photo) => photo.status === 'approved')
+  return memoryStore.photos.filter((photo) => photo.status === 'published')
 }
 
 export async function getPendingPhotos() {
@@ -133,8 +137,8 @@ export async function createPhotosFromUpload(files, guestName, message) {
     return normalizePhoto({
       id,
       event_id: 'bautizo-matias',
-      guest_name: guestName || 'Invitado',
-      message: message || '',
+      guest_name: guestName?.trim() || '',
+      message: message?.trim() || '',
       image_url: file.image_url,
       cloudinary_public_id: file.cloudinary_public_id || id,
       status: 'pending',

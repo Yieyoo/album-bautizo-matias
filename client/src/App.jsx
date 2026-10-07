@@ -3,7 +3,8 @@ import QRCode from 'react-qr-code'
 import './App.css'
 
 const validImageTypes = ['image/jpeg', 'image/png', 'image/webp']
-const isStaticDemo = import.meta.env.PROD
+const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
+const isStaticDemo = import.meta.env.PROD && !apiUrl
 const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}`
 
 const fallbackPhotos = [
@@ -11,6 +12,7 @@ const fallbackPhotos = [
     id: 'seed-1',
     guest_name: 'Mamá',
     message: 'Muchas felicidades Matías ❤️',
+    status: 'published',
     image_url:
       'https://images.unsplash.com/photo-1731743214989-9b4d60937ddf?auto=format&fit=crop&w=900&q=80',
   },
@@ -18,6 +20,7 @@ const fallbackPhotos = [
     id: 'seed-2',
     guest_name: 'Familia',
     message: 'Un recuerdo muy especial de este día.',
+    status: 'published',
     image_url:
       'https://images.unsplash.com/photo-1787214091915-994e9806ff9d?auto=format&fit=crop&w=900&q=80',
   },
@@ -25,23 +28,27 @@ const fallbackPhotos = [
     id: 'seed-3',
     guest_name: 'Con cariño',
     message: 'Celebrando juntos a Matías.',
+    status: 'published',
     image_url:
       'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=900&q=80',
   },
 ]
 
 function App() {
-  const [approvedPhotos, setApprovedPhotos] = useState(fallbackPhotos)
+  const [publishedPhotos, setPublishedPhotos] = useState(isStaticDemo ? fallbackPhotos : [])
   const [pendingPhotos, setPendingPhotos] = useState([])
   const [selectedFiles, setSelectedFiles] = useState([])
   const [guestName, setGuestName] = useState('')
   const [message, setMessage] = useState('')
-  const [view, setView] = useState('home')
+  const [view, setView] = useState(
+    new URLSearchParams(window.location.search).has('admin') ? 'admin' : 'home'
+  )
   const [lightboxIndex, setLightboxIndex] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
+  const [adminToken, setAdminToken] = useState('')
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
   const [adminError, setAdminError] = useState('')
   const [showFloatingUpload, setShowFloatingUpload] = useState(false)
@@ -49,14 +56,14 @@ function App() {
   const touchStartX = useRef(null)
 
   useEffect(() => {
-    loadApprovedPhotos()
+    loadPublishedPhotos()
   }, [])
 
   useEffect(() => {
     if (view === 'admin' && isAdminAuthenticated) {
       loadPendingPhotos()
     }
-  }, [view, isAdminAuthenticated])
+  }, [view, isAdminAuthenticated, adminToken])
 
   useEffect(() => {
     if (view !== 'home') {
@@ -95,19 +102,21 @@ function App() {
     return () => window.clearInterval(intervalId)
   }, [uploading])
 
-  async function loadApprovedPhotos() {
+  async function loadPublishedPhotos() {
     if (isStaticDemo) {
       return
     }
 
     try {
-      const response = await fetch('/api/photos?status=approved')
+      const response = await fetch(`${apiUrl}/api/photos?status=published`)
       const data = await response.json()
-      if (data.photos && data.photos.length) {
-        setApprovedPhotos(data.photos)
+      if (!response.ok) {
+        throw new Error(data.message || 'No se pudieron cargar los recuerdos.')
       }
+      setPublishedPhotos(data.photos ?? [])
     } catch (error) {
-      console.error('Error loading approved photos', error)
+      console.error('Error loading published photos', error)
+      setStatusMessage(error.message)
     }
   }
 
@@ -117,11 +126,17 @@ function App() {
     }
 
     try {
-      const response = await fetch('/api/photos?status=pending')
+      const response = await fetch(`${apiUrl}/api/photos?status=pending`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      })
       const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || 'No se pudieron cargar las fotos pendientes.')
+      }
       setPendingPhotos(data.photos ?? [])
     } catch (error) {
       console.error('Error loading pending photos', error)
+      setAdminError(error.message)
     }
   }
 
@@ -170,15 +185,16 @@ function App() {
       if (isStaticDemo) {
         const demoPhotos = selectedFiles.map((file) => ({
           id: `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          guest_name: guestName,
+          guest_name: guestName.trim(),
           message,
           image_url: URL.createObjectURL(file),
+          status: 'pending',
         }))
 
         setPendingPhotos((current) => [...demoPhotos, ...current])
-        data = { message: 'Fotos añadidas a esta demo en este navegador.' }
+        data = { message: 'Tus fotos quedaron pendientes de revisión familiar.' }
       } else {
-        const response = await fetch('/api/photos', {
+        const response = await fetch(`${apiUrl}/api/photos`, {
           method: 'POST',
           body: formData,
         })
@@ -193,11 +209,9 @@ function App() {
       setSelectedFiles([])
       setGuestName('')
       setMessage('')
-      setTimeout(() => {
-        setView('confirm')
-        setUploading(false)
-        setStatusMessage(data.message || 'Gracias por compartir tus recuerdos.')
-      }, 400)
+      setView('confirm')
+      setUploading(false)
+      setStatusMessage(data.message || 'Tus fotos quedaron pendientes de revisión familiar.')
     } catch (error) {
       setStatusMessage(error.message)
       setUploading(false)
@@ -207,36 +221,59 @@ function App() {
   async function handleAdminLogin(event) {
     event.preventDefault()
 
-    if (adminPassword === 'matias2024') {
+    try {
+      if (isStaticDemo) {
+        throw new Error('El panel familiar requiere el servidor del álbum.')
+      }
+
+      const response = await fetch(`${apiUrl}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminPassword }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || 'No se pudo iniciar sesión.')
+      }
+      setAdminToken(data.token)
+
       setIsAdminAuthenticated(true)
       setAdminPassword('')
       setAdminError('')
       setView('admin')
-      await loadPendingPhotos()
-      return
+    } catch (error) {
+      setAdminError(error.message)
     }
-
-    setAdminError('Contraseña incorrecta. Intenta de nuevo.')
   }
 
-  async function approvePhoto(id) {
+  async function updatePendingPhoto(id, status) {
     if (isStaticDemo) {
       const photo = pendingPhotos.find((item) => item.id === id)
       if (photo) {
         setPendingPhotos((current) => current.filter((item) => item.id !== id))
-        setApprovedPhotos((current) => [...current, photo])
+        if (status === 'published') {
+          setPublishedPhotos((current) => [...current, { ...photo, status }])
+        }
       }
       return
     }
 
-    await fetch(`/api/photos/${id}`, {
+    const response = await fetch(`${apiUrl}/api/photos/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'approved' }),
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ status }),
     })
+    if (!response.ok) {
+      const data = await response.json()
+      setAdminError(data.message || 'No se pudo actualizar la fotografía.')
+      return
+    }
 
     await loadPendingPhotos()
-    await loadApprovedPhotos()
+    await loadPublishedPhotos()
   }
 
   async function deletePhoto(id) {
@@ -246,16 +283,22 @@ function App() {
         URL.revokeObjectURL(photo.image_url)
       }
       setPendingPhotos((current) => current.filter((item) => item.id !== id))
-      setApprovedPhotos((current) => current.filter((item) => item.id !== id))
+      setPublishedPhotos((current) => current.filter((item) => item.id !== id))
       return
     }
 
-    await fetch(`/api/photos/${id}`, {
+    const response = await fetch(`${apiUrl}/api/photos/${id}`, {
       method: 'DELETE',
+      headers: { Authorization: `Bearer ${adminToken}` },
     })
+    if (!response.ok) {
+      const data = await response.json()
+      setAdminError(data.message || 'No se pudo eliminar la fotografía.')
+      return
+    }
 
     await loadPendingPhotos()
-    await loadApprovedPhotos()
+    await loadPublishedPhotos()
   }
 
   function openLightbox(index) {
@@ -273,7 +316,7 @@ function App() {
 
     const nextIndex = Math.min(
       Math.max(lightboxIndex + direction, 0),
-      approvedPhotos.length - 1
+      publishedPhotos.length - 1
     )
 
     setLightboxIndex(nextIndex)
@@ -380,9 +423,9 @@ function App() {
                 <p>Un pequeño álbum de este gran día</p>
               </div>
 
-              {approvedPhotos.length ? (
+              {publishedPhotos.length ? (
                 <div className="gallery-grid">
-                  {approvedPhotos.map((photo, index) => (
+                  {publishedPhotos.map((photo, index) => (
                     <button
                       type="button"
                       key={photo.id}
@@ -430,10 +473,11 @@ function App() {
               <h2>Selecciona tus fotos</h2>
               {isStaticDemo && (
                 <p className="status-message">
-                  Demo: las fotos se muestran solo en este navegador y no se guardan en línea.
+                  Demo: los envíos solo existen durante esta sesión y no se comparten con la familia.
                 </p>
               )}
 
+              <p className="selection-count">Fotografías (obligatorio)</p>
               <input
                 ref={fileInputRef}
                 id="photo-upload"
@@ -445,74 +489,74 @@ function App() {
               />
 
               <label htmlFor="photo-upload" className="primary-button upload-button">
-                + Seleccionar fotos
+                + Seleccionar fotografías
               </label>
 
               {selectedFiles.length > 0 && (
-                <>
-                  <div className="selected-grid">
-                    {selectedFiles.map((file, index) => {
-                      const previewUrl = URL.createObjectURL(file)
+                <div className="selected-grid">
+                  {selectedFiles.map((file, index) => {
+                    const previewUrl = URL.createObjectURL(file)
 
-                      return (
-                        <div className="selected-photo" key={`${file.name}-${index}`}>
-                          <img
-                            src={previewUrl}
-                            alt={file.name}
-                            onLoad={() => URL.revokeObjectURL(previewUrl)}
-                          />
-                          <button
-                            type="button"
-                            className="remove-photo"
-                            onClick={() => handleRemoveSelected(index)}
-                            aria-label={`Eliminar ${file.name}`}
-                          >
-                            ×
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
+                    return (
+                      <div className="selected-photo" key={`${file.name}-${index}`}>
+                        <img
+                          src={previewUrl}
+                          alt={file.name}
+                          onLoad={() => URL.revokeObjectURL(previewUrl)}
+                        />
+                        <button
+                          type="button"
+                          className="remove-photo"
+                          onClick={() => handleRemoveSelected(index)}
+                          aria-label={`Eliminar ${file.name}`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
 
-                  <p className="selection-count">{selectedFiles.length} fotos seleccionadas</p>
+              {selectedFiles.length > 0 && (
+                <p className="selection-count">{selectedFiles.length} fotos seleccionadas</p>
+              )}
 
-                  <div className="field-group">
-                    <label htmlFor="guestName">Tu nombre</label>
-                    <input
-                      id="guestName"
-                      type="text"
-                      placeholder="Ej. María"
-                      value={guestName}
-                      onChange={(event) => setGuestName(event.target.value)}
-                    />
-                  </div>
+              <div className="field-group">
+                <label htmlFor="guestName">Nombre (opcional)</label>
+                <input
+                  id="guestName"
+                  type="text"
+                  placeholder="Ej. María"
+                  value={guestName}
+                  onChange={(event) => setGuestName(event.target.value)}
+                />
+              </div>
 
-                  <div className="field-group">
-                    <label htmlFor="message">Mensaje</label>
-                    <textarea
-                      id="message"
-                      rows="4"
-                      placeholder="Escribe una felicitación para Matías ❤️"
-                      value={message}
-                      onChange={(event) => setMessage(event.target.value)}
-                    />
-                  </div>
+              <div className="field-group">
+                <label htmlFor="message">Mensaje (opcional)</label>
+                <textarea
+                  id="message"
+                  rows="4"
+                  placeholder="Escribe una felicitación para Matías ❤️"
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                />
+              </div>
 
-                  <button
-                    type="button"
-                    className="primary-button submit-button"
-                    onClick={handleSubmitPhotos}
-                    disabled={uploading}
-                  >
-                    {uploading ? 'Subiendo tus fotos...' : '❤️ Compartir recuerdos'}
-                  </button>
+              <button
+                type="button"
+                className="primary-button submit-button"
+                onClick={handleSubmitPhotos}
+                disabled={uploading || selectedFiles.length === 0}
+              >
+                {uploading ? 'Subiendo tus fotos...' : '❤️ Compartir recuerdos'}
+              </button>
 
-                  {uploading && (
-                    <div className="progress-box" aria-live="polite">
-                      <div className="progress-bar" style={{ width: `${uploadProgress}%` }} />
-                    </div>
-                  )}
-                </>
+              {uploading && (
+                <div className="progress-box" aria-live="polite">
+                  <div className="progress-bar" style={{ width: `${uploadProgress}%` }} />
+                </div>
               )}
 
               {statusMessage && <p className="status-message">{statusMessage}</p>}
@@ -526,10 +570,10 @@ function App() {
               <div className="heart">❤️</div>
               <h2>¡Gracias!</h2>
               <p>
-                Tus fotografías fueron <span>recibidas correctamente.</span>
+                Tus fotografías quedaron <span>pendientes de revisión familiar.</span>
               </p>
               <p>
-                Ayudaste a guardar un <span>recuerdo de este día.</span>
+                El nombre y el mensaje solo se mostrarán <span>si la familia publica la foto.</span>
               </p>
               <button type="button" className="primary-button" onClick={() => setView('home')}>
                 Ver álbum
@@ -565,6 +609,7 @@ function App() {
             ) : (
               <section className="admin-panel">
                 <h2>Fotos pendientes</h2>
+                {adminError && <p className="status-message error-message">{adminError}</p>}
                 {pendingPhotos.length ? (
                   pendingPhotos.map((photo) => (
                     <article key={photo.id} className="admin-photo-item">
@@ -574,8 +619,11 @@ function App() {
                         <p>{photo.message || 'Sin mensaje'}</p>
                       </div>
                       <div className="admin-actions">
-                        <button type="button" onClick={() => approvePhoto(photo.id)}>
-                          Aprobar
+                        <button type="button" onClick={() => updatePendingPhoto(photo.id, 'published')}>
+                          Publicar
+                        </button>
+                        <button type="button" className="danger" onClick={() => updatePendingPhoto(photo.id, 'rejected')}>
+                          Rechazar
                         </button>
                         <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
                           Eliminar
@@ -608,7 +656,7 @@ function App() {
         )}
       </div>
 
-      {lightboxIndex !== null && approvedPhotos[lightboxIndex] && (
+      {lightboxIndex !== null && publishedPhotos[lightboxIndex] && (
         <div className="lightbox-overlay" onClick={closeLightbox}>
           <div
             className="lightbox"
@@ -629,7 +677,7 @@ function App() {
               ‹
             </button>
 
-            <img src={approvedPhotos[lightboxIndex].image_url} alt="Foto ampliada" />
+            <img src={publishedPhotos[lightboxIndex].image_url} alt="Foto ampliada" />
 
             <button
               type="button"
@@ -641,8 +689,8 @@ function App() {
             </button>
 
             <div className="lightbox-meta">
-              <strong>{approvedPhotos[lightboxIndex].guest_name || 'Invitado'}</strong>
-              <p>{approvedPhotos[lightboxIndex].message || 'Recuerdo del bautizo'}</p>
+              <strong>{publishedPhotos[lightboxIndex].guest_name || 'Invitado'}</strong>
+              <p>{publishedPhotos[lightboxIndex].message || 'Recuerdo del bautizo'}</p>
             </div>
           </div>
         </div>
