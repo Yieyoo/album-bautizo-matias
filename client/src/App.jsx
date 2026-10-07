@@ -473,17 +473,16 @@ function App() {
                     <button type="button" onClick={() => updatePhotoStatus(photo.id, 'published')}>
                       Publicar
                     </button>
-                    <button type="button" className="danger" onClick={() => updatePhotoStatus(photo.id, 'rejected')}>
-                      Rechazar
-                    </button>
                     <button type="button" onClick={() => updatePhotoStatus(photo.id, 'archived')}>
                       Archivar
                     </button>
                   </>
                 )}
-                <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
-                  Eliminar
-                </button>
+                {(isPublished || isArchived) && (
+                  <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
+                    Eliminar
+                  </button>
+                )}
               </div>
             </article>
           ))}
@@ -495,12 +494,6 @@ function App() {
             </span>
             <button type="button" onClick={() => moderateSelectedPhotos(submission.photos, 'published')}>
               Publicar seleccionadas
-            </button>
-            <button type="button" onClick={() => moderateSelectedPhotos(submission.photos, 'archived')}>
-              Archivar seleccionadas
-            </button>
-            <button type="button" className="danger" onClick={() => moderateSelectedPhotos(submission.photos, 'rejected')}>
-              Rechazar seleccionadas
             </button>
             <button type="button" onClick={() => moderateSelectedPhotos(submission.photos, 'archived')}>
               Archivar seleccionadas
