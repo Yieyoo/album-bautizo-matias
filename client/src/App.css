@@ -61,8 +61,7 @@
 .remove-photo,
 .admin-submission-actions button,
 .nav-button,
-.lightbox-close,
-.secondary-action {
+.lightbox-close {
   font: inherit;
 }
 
@@ -159,7 +158,6 @@
 .primary-button:hover,
 .share-button:hover,
 .submit-button:hover,
-.secondary-action:hover,
 .admin-submission-actions button:hover {
   filter: brightness(0.98);
 }
@@ -417,29 +415,6 @@
   gap: 12px;
 }
 
-.demo-notice {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid rgba(101, 134, 160, 0.22);
-  border-radius: 14px;
-  background: #f1f6fa;
-  color: #526d82;
-  font-size: 0.84rem;
-  line-height: 1.5;
-}
-
-.demo-notice strong {
-  color: #3f5b72;
-}
-
-.demo-notice code {
-  font-family: inherit;
-  font-weight: 800;
-  color: #324b60;
-}
-
 .admin-panel {
   display: flex;
   flex-direction: column;
@@ -447,6 +422,14 @@
 }
 
 .admin-published {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(189, 149, 103, 0.3);
+}
+
+.admin-archived {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -620,26 +603,6 @@
 .submission-bulk-actions .danger {
   background: #f5e0df;
   color: #8a3e3e;
-}
-
-.admin-qr {
-  margin-top: 8px;
-}
-
-.admin-qr-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.secondary-action {
-  flex: 1;
-  border: 1px solid rgba(87, 109, 142, 0.35);
-  background: #f6f8fb;
-  color: #294768;
-  border-radius: 12px;
-  padding: 10px 8px;
-  font-weight: 800;
-  cursor: pointer;
 }
 
 .empty-state {
@@ -1029,11 +992,6 @@
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.55;
-}
-
-.review-notice-demo {
-  color: #9a8876;
-  font-size: 0.76rem !important;
 }
 
 .site-footer {

@@ -100,6 +100,7 @@ function groupPhotosBySubmission(photos) {
 function App() {
   const [publishedPhotos, setPublishedPhotos] = useState([])
   const [pendingPhotos, setPendingPhotos] = useState([])
+  const [archivedPhotos, setArchivedPhotos] = useState([])
   const [selectedFiles, setSelectedFiles] = useState([])
   const [guestName, setGuestName] = useState('')
   const [message, setMessage] = useState('')
@@ -125,6 +126,7 @@ function App() {
   useEffect(() => {
     if (view === 'admin' && isAdminAuthenticated) {
       loadPendingPhotos()
+      loadArchivedPhotos()
     }
   }, [view, isAdminAuthenticated, adminToken])
 
@@ -216,7 +218,7 @@ function App() {
     }
 
     if (isStaticDemo) {
-      setStatusMessage('Esta demo no está conectada al servidor: tus fotografías no se enviaron a la familia.')
+      setStatusMessage('El envío de fotografías no está disponible ahora; tus fotos no se enviaron.')
       return
     }
 
@@ -260,11 +262,12 @@ function App() {
     try {
       if (isStaticDemo) {
         if (adminPassword !== demoAdminPassword) {
-          throw new Error('Contraseña incorrecta. Usa la clave de demostración indicada.')
+          throw new Error('Contraseña incorrecta. Intenta de nuevo.')
         }
 
         setPendingPhotos(demoPendingPhotos)
         setPublishedPhotos(demoPublishedPhotos)
+        setArchivedPhotos([])
         setIsAdminAuthenticated(true)
         setAdminPassword('')
         setAdminError('')
@@ -294,15 +297,18 @@ function App() {
 
   async function updatePhotoStatus(id, status, refresh = true) {
     if (isStaticDemo) {
-      const photo = [...pendingPhotos, ...publishedPhotos].find((item) => item.id === id)
+      const photo = [...pendingPhotos, ...publishedPhotos, ...archivedPhotos].find((item) => item.id === id)
       if (!photo) return false
 
       setPendingPhotos((current) => current.filter((item) => item.id !== id))
       setPublishedPhotos((current) => current.filter((item) => item.id !== id))
+      setArchivedPhotos((current) => current.filter((item) => item.id !== id))
       if (status === 'pending') {
         setPendingPhotos((current) => [{ ...photo, status }, ...current])
       } else if (status === 'published') {
         setPublishedPhotos((current) => [{ ...photo, status }, ...current])
+      } else if (status === 'archived') {
+        setArchivedPhotos((current) => [{ ...photo, status }, ...current])
       }
       setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
       return true
@@ -326,6 +332,7 @@ function App() {
     if (refresh) {
       await loadPendingPhotos()
       await loadPublishedPhotos()
+      await loadArchivedPhotos()
     }
     return true
   }
@@ -360,6 +367,25 @@ function App() {
     if (results.some(Boolean) && !isStaticDemo) {
       await loadPendingPhotos()
       await loadPublishedPhotos()
+      await loadArchivedPhotos()
+    }
+  }
+
+  async function loadArchivedPhotos() {
+    if (isStaticDemo) return
+
+    try {
+      const response = await fetch(`${apiUrl}/api/photos?status=archived`, {
+        headers: { Authorization: 'Bearer ' + adminToken },
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || 'No se pudieron cargar las fotos archivadas.')
+      }
+      setArchivedPhotos(data.photos ?? [])
+    } catch (error) {
+      console.error('Error loading archived photos', error)
+      setAdminError(error.message)
     }
   }
 
@@ -367,6 +393,7 @@ function App() {
     if (isStaticDemo) {
       setPendingPhotos((current) => current.filter((item) => item.id !== id))
       setPublishedPhotos((current) => current.filter((item) => item.id !== id))
+      setArchivedPhotos((current) => current.filter((item) => item.id !== id))
       setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
       return
     }
@@ -383,10 +410,11 @@ function App() {
 
     await loadPendingPhotos()
     await loadPublishedPhotos()
+    await loadArchivedPhotos()
     setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
   }
 
-  function renderPhotoSubmissions(photos, isPublished = false) {
+  function renderPhotoSubmissions(photos, isPublished = false, isArchived = false) {
     return groupPhotosBySubmission(photos).map((submission) => (
       <article key={submission.id} className="admin-submission">
         <header className="admin-submission-header">
@@ -398,7 +426,7 @@ function App() {
             <span className="submission-count">
               {submission.photos.length} {submission.photos.length === 1 ? 'foto' : 'fotos'}
             </span>
-            {!isPublished && (
+            {!isPublished && !isArchived && (
               <label className="select-all-photos">
                 <input
                   type="checkbox"
@@ -414,7 +442,7 @@ function App() {
         <div className="admin-submission-grid">
           {submission.photos.map((photo, index) => (
             <article key={photo.id} className="admin-submission-photo">
-              {!isPublished && (
+              {!isPublished && !isArchived && (
                 <label className="photo-select">
                   <input
                     type="checkbox"
@@ -428,8 +456,17 @@ function App() {
               <img src={photo.image_url} alt={`Foto ${index + 1} de ${submission.guest_name || 'invitado'}`} />
               <div className="admin-submission-actions">
                 {isPublished ? (
+                  <>
+                    <button type="button" onClick={() => updatePhotoStatus(photo.id, 'pending')}>
+                      Retirar
+                    </button>
+                    <button type="button" onClick={() => updatePhotoStatus(photo.id, 'archived')}>
+                      Archivar
+                    </button>
+                  </>
+                ) : isArchived ? (
                   <button type="button" onClick={() => updatePhotoStatus(photo.id, 'pending')}>
-                    Retirar
+                    Restaurar
                   </button>
                 ) : (
                   <>
@@ -438,6 +475,9 @@ function App() {
                     </button>
                     <button type="button" className="danger" onClick={() => updatePhotoStatus(photo.id, 'rejected')}>
                       Rechazar
+                    </button>
+                    <button type="button" onClick={() => updatePhotoStatus(photo.id, 'archived')}>
+                      Archivar
                     </button>
                   </>
                 )}
@@ -448,7 +488,7 @@ function App() {
             </article>
           ))}
         </div>
-        {!isPublished && selectedPhotoIds.some((id) => submission.photos.some((photo) => photo.id === id)) && (
+        {!isPublished && !isArchived && selectedPhotoIds.some((id) => submission.photos.some((photo) => photo.id === id)) && (
           <div className="submission-bulk-actions">
             <span>
               {submission.photos.filter((photo) => selectedPhotoIds.includes(photo.id)).length} seleccionadas
@@ -456,8 +496,14 @@ function App() {
             <button type="button" onClick={() => moderateSelectedPhotos(submission.photos, 'published')}>
               Publicar seleccionadas
             </button>
+            <button type="button" onClick={() => moderateSelectedPhotos(submission.photos, 'archived')}>
+              Archivar seleccionadas
+            </button>
             <button type="button" className="danger" onClick={() => moderateSelectedPhotos(submission.photos, 'rejected')}>
               Rechazar seleccionadas
+            </button>
+            <button type="button" onClick={() => moderateSelectedPhotos(submission.photos, 'archived')}>
+              Archivar seleccionadas
             </button>
           </div>
         )}
@@ -512,21 +558,6 @@ function App() {
       console.error('No se pudo copiar el enlace del evento', error)
       setStatusMessage('No se pudo copiar el enlace. Puedes copiarlo desde la barra del navegador.')
     })
-  }
-
-  function downloadQrCode() {
-    const svg = document.querySelector('#event-qr, #admin-qr')
-    if (!svg) return
-
-    const serializer = new XMLSerializer()
-    const source = serializer.serializeToString(svg)
-    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'qr-bautizo-matias.svg'
-    link.click()
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -608,15 +639,8 @@ function App() {
                 <span className="review-notice-mark" aria-hidden="true">✦</span>
                 <h2>Fotografías en revisión</h2>
                 <p>
-                  {isStaticDemo
-                    ? 'Cuando la familia revise y publique las fotografías, aparecerán aquí. Próximamente les haremos saber cuáles se publicaron.'
-                    : 'La familia está revisando las fotografías. Próximamente les haremos saber cuáles se publicarán; entonces aparecerán aquí.'}
+                  La familia revisará las fotografías. Las que decida publicar aparecerán aquí.
                 </p>
-                {isStaticDemo && (
-                  <p className="review-notice-demo">
-                    Esta demo todavía no está conectada al panel familiar.
-                  </p>
-                )}
               </section>
             )}
 
@@ -645,7 +669,7 @@ function App() {
               <h2>Selecciona tus fotos</h2>
               {isStaticDemo && (
                 <p className="status-message">
-                  Esta demo aún no está conectada al panel familiar: los envíos no llegan a la familia.
+                  El envío de fotografías todavía no está disponible; las fotos no se enviarán a la familia.
                 </p>
               )}
 
@@ -743,7 +767,7 @@ function App() {
               <h2>¡Gracias!</h2>
               <p>
               {isStaticDemo
-                ? 'En esta demo no se enviaron a la familia; al conectar el servidor, las fotografías quedarán en revisión.'
+                ? 'Las fotografías no se enviaron porque el servicio de carga todavía no está disponible.'
                 : 'Tus fotografías quedaron en revisión por la familia. Próximamente les haremos saber cuáles se publicarán.'}
               </p>
               <p>
@@ -767,13 +791,6 @@ function App() {
             {!isAdminAuthenticated ? (
               <form className="admin-login" onSubmit={handleAdminLogin}>
                 <h2>Administrador</h2>
-                {isStaticDemo && (
-                  <div className="demo-notice">
-                    <strong>Vista previa del panel</strong>
-                    <span>Contraseña de demostración: <code>matias2026</code></span>
-                    <span>Incluye fotos de ejemplo. No guarda cambios ni afecta el álbum público.</span>
-                  </div>
-                )}
                 <label htmlFor="adminPassword">Contraseña</label>
                 <input
                   id="adminPassword"
@@ -790,11 +807,6 @@ function App() {
             ) : (
               <section className="admin-panel">
                 <h2>Fotos pendientes</h2>
-                {isStaticDemo && (
-                  <div className="demo-notice">
-                    Modo demostración: estas fotos y acciones son de ejemplo y solo duran en esta sesión.
-                  </div>
-                )}
                 {adminError && <p className="status-message error-message">{adminError}</p>}
                 {pendingPhotos.length ? (
                   renderPhotoSubmissions(pendingPhotos)
@@ -811,20 +823,13 @@ function App() {
                   )}
                 </div>
 
-                <div className="qr-card admin-qr">
-                  <div>
-                    <p className="qr-title">QR del evento</p>
-                    <p className="qr-subtitle">/bautizo/matias</p>
-                  </div>
-                  <QRCode id="admin-qr" value={shareUrl} size={88} bgColor="#ffffff" fgColor="#1b2b3d" />
-                </div>
-                <div className="admin-qr-actions">
-                  <button type="button" className="secondary-action" onClick={copyEventLink}>
-                    Copiar enlace
-                  </button>
-                  <button type="button" className="secondary-action" onClick={downloadQrCode}>
-                    Descargar QR
-                  </button>
+                <div className="admin-archived">
+                  <h2>Fotos archivadas</h2>
+                  {archivedPhotos.length ? (
+                    renderPhotoSubmissions(archivedPhotos, false, true)
+                  ) : (
+                    <p className="empty-state">No hay fotos archivadas.</p>
+                  )}
                 </div>
               </section>
             )}

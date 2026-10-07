@@ -8,6 +8,7 @@ import {
   deletePhotoById,
   getPublishedPhotos,
   getPendingPhotos,
+  getArchivedPhotos,
   updatePhotoStatus,
 } from './db.js'
 import { uploadBufferToCloudinary } from './cloudinary.js'
@@ -76,14 +77,21 @@ app.get('/api/event', (req, res) => {
 })
 
 app.get('/api/photos', async (req, res) => {
-  const status = req.query.status === 'pending' ? 'pending' : 'published'
-  if (status === 'pending' && !isAdminAuthenticated(req)) {
-    return res.status(401).json({ message: 'Inicia sesión para revisar fotos pendientes.' })
+  const requestedStatus = req.query.status
+  const status = ['pending', 'published', 'archived'].includes(requestedStatus)
+    ? requestedStatus
+    : 'published'
+  if (status !== 'published' && !isAdminAuthenticated(req)) {
+    return res.status(401).json({ message: 'Inicia sesión para revisar fotografías.' })
   }
 
   try {
-    const photos =
-      status === 'pending' ? await getPendingPhotos() : await getPublishedPhotos()
+    const photosByStatus = {
+      pending: getPendingPhotos,
+      published: getPublishedPhotos,
+      archived: getArchivedPhotos,
+    }
+    const photos = await photosByStatus[status]()
 
     res.json({ photos })
   } catch (error) {
@@ -152,7 +160,7 @@ app.patch('/api/photos/:id', async (req, res) => {
   const { id } = req.params
   const { status } = req.body
 
-  if (!['published', 'pending', 'rejected'].includes(status)) {
+  if (!['published', 'pending', 'rejected', 'archived'].includes(status)) {
     return res.status(400).json({ message: 'Estado no válido.' })
   }
 

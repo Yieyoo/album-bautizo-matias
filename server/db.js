@@ -89,6 +89,21 @@ export async function getPendingPhotos() {
   return memoryStore.photos.filter((photo) => photo.status === 'pending')
 }
 
+export async function getArchivedPhotos() {
+  const db = ensureDatabaseConnection()
+
+  if (db) {
+    await ensureTable()
+    const result = await db.query(
+      'SELECT * FROM photos WHERE status = $1 ORDER BY created_at DESC',
+      ['archived']
+    )
+    return result.rows.map(normalizePhoto)
+  }
+
+  return memoryStore.photos.filter((photo) => photo.status === 'archived')
+}
+
 export async function createPhotosFromUpload(files, guestName, message) {
   const db = ensureDatabaseConnection()
   const submissionId = randomUUID()
