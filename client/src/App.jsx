@@ -7,35 +7,8 @@ const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 const isStaticDemo = import.meta.env.PROD && !apiUrl
 const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}`
 
-const fallbackPhotos = [
-  {
-    id: 'seed-1',
-    guest_name: 'Mamá',
-    message: 'Muchas felicidades Matías ❤️',
-    status: 'published',
-    image_url:
-      'https://images.unsplash.com/photo-1731743214989-9b4d60937ddf?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'seed-2',
-    guest_name: 'Familia',
-    message: 'Un recuerdo muy especial de este día.',
-    status: 'published',
-    image_url:
-      'https://images.unsplash.com/photo-1787214091915-994e9806ff9d?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 'seed-3',
-    guest_name: 'Con cariño',
-    message: 'Celebrando juntos a Matías.',
-    status: 'published',
-    image_url:
-      'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=900&q=80',
-  },
-]
-
 function App() {
-  const [publishedPhotos, setPublishedPhotos] = useState(isStaticDemo ? fallbackPhotos : [])
+  const [publishedPhotos, setPublishedPhotos] = useState([])
   const [pendingPhotos, setPendingPhotos] = useState([])
   const [selectedFiles, setSelectedFiles] = useState([])
   const [guestName, setGuestName] = useState('')
@@ -72,14 +45,18 @@ function App() {
     }
 
     const hero = document.querySelector('.hero-panel')
-    if (!hero) {
+    const footer = document.querySelector('.site-footer')
+    if (!hero || !footer) {
       return undefined
     }
 
-    const observer = new IntersectionObserver(([entry]) => {
-      setShowFloatingUpload(!entry.isIntersecting)
+    const observer = new IntersectionObserver((entries) => {
+      const heroVisible = entries.find((entry) => entry.target === hero)?.isIntersecting
+      const footerVisible = entries.find((entry) => entry.target === footer)?.isIntersecting
+      setShowFloatingUpload(!heroVisible && !footerVisible)
     })
     observer.observe(hero)
+    observer.observe(footer)
 
     return () => observer.disconnect()
   }, [view])
@@ -171,6 +148,11 @@ function App() {
       return
     }
 
+    if (isStaticDemo) {
+      setStatusMessage('Esta demo no está conectada al servidor: tus fotografías no se enviaron a la familia.')
+      return
+    }
+
     const formData = new FormData()
     selectedFiles.forEach((file) => formData.append('photos', file))
     formData.append('guestName', guestName)
@@ -182,27 +164,14 @@ function App() {
       setStatusMessage('Subiendo tus fotos...')
 
       let data
-      if (isStaticDemo) {
-        const demoPhotos = selectedFiles.map((file) => ({
-          id: `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          guest_name: guestName.trim(),
-          message,
-          image_url: URL.createObjectURL(file),
-          status: 'pending',
-        }))
+      const response = await fetch(`${apiUrl}/api/photos`, {
+        method: 'POST',
+        body: formData,
+      })
 
-        setPendingPhotos((current) => [...demoPhotos, ...current])
-        data = { message: 'Tus fotos quedaron pendientes de revisión familiar.' }
-      } else {
-        const response = await fetch(`${apiUrl}/api/photos`, {
-          method: 'POST',
-          body: formData,
-        })
-
-        data = await response.json()
-        if (!response.ok) {
-          throw new Error(data.message || 'No se pudieron guardar las fotos.')
-        }
+      data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || 'No se pudieron guardar las fotos.')
       }
 
       setUploadProgress(100)
@@ -241,23 +210,13 @@ function App() {
       setAdminPassword('')
       setAdminError('')
       setView('admin')
+      await loadPublishedPhotos()
     } catch (error) {
       setAdminError(error.message)
     }
   }
 
-  async function updatePendingPhoto(id, status) {
-    if (isStaticDemo) {
-      const photo = pendingPhotos.find((item) => item.id === id)
-      if (photo) {
-        setPendingPhotos((current) => current.filter((item) => item.id !== id))
-        if (status === 'published') {
-          setPublishedPhotos((current) => [...current, { ...photo, status }])
-        }
-      }
-      return
-    }
-
+  async function updatePhotoStatus(id, status) {
     const response = await fetch(`${apiUrl}/api/photos/${id}`, {
       method: 'PATCH',
       headers: {
@@ -390,9 +349,11 @@ function App() {
                   <span className="button-chevron" aria-hidden="true">›</span>
                 </button>
 
-                <button type="button" className="secondary-link" onClick={scrollToGallery}>
-                  <span aria-hidden="true">↓</span> Ver recuerdos
-                </button>
+                {publishedPhotos.length > 0 && (
+                  <button type="button" className="secondary-link" onClick={scrollToGallery}>
+                    <span aria-hidden="true">↓</span> Ver recuerdos
+                  </button>
+                )}
               </div>
             </section>
 
@@ -415,15 +376,14 @@ function App() {
               </button>
             </div>
 
-            <section className="gallery-section" id="gallery">
-              <div className="gallery-heading">
-                <div className="title-divider" aria-hidden="true" />
-                <h2>Recuerdos</h2>
-                <div className="title-divider" aria-hidden="true" />
-                <p>Un pequeño álbum de este gran día</p>
-              </div>
-
-              {publishedPhotos.length ? (
+            {publishedPhotos.length > 0 ? (
+              <section className="gallery-section" id="gallery">
+                <div className="gallery-heading">
+                  <div className="title-divider" aria-hidden="true" />
+                  <h2>Recuerdos</h2>
+                  <div className="title-divider" aria-hidden="true" />
+                  <p>Un pequeño álbum de este gran día</p>
+                </div>
                 <div className="gallery-grid">
                   {publishedPhotos.map((photo, index) => (
                     <button
@@ -437,14 +397,33 @@ function App() {
                     </button>
                   ))}
                 </div>
-              ) : (
-                <p className="empty-state">Aún no hay recuerdos compartidos.</p>
-              )}
-            </section>
+              </section>
+            ) : (
+              <section className="review-notice" aria-live="polite">
+                <span className="review-notice-mark" aria-hidden="true">✦</span>
+                <h2>Fotografías en revisión</h2>
+                <p>
+                  {isStaticDemo
+                    ? 'Cuando la familia revise y publique las fotografías, aparecerán aquí. Próximamente les haremos saber cuáles se publicaron.'
+                    : 'La familia está revisando las fotografías. Próximamente les haremos saber cuáles se publicarán; entonces aparecerán aquí.'}
+                </p>
+                {isStaticDemo && (
+                  <p className="review-notice-demo">
+                    Esta demo todavía no está conectada al panel familiar.
+                  </p>
+                )}
+              </section>
+            )}
 
             <div className="home-status" aria-live="polite">
               {statusMessage && <p className="status-message">{statusMessage}</p>}
             </div>
+
+            <footer className="site-footer">
+              <button type="button" className="family-access" onClick={() => setView('admin')}>
+                Acceso familiar
+              </button>
+            </footer>
 
             {showFloatingUpload && (
               <div className="floating-upload">
@@ -473,7 +452,7 @@ function App() {
               <h2>Selecciona tus fotos</h2>
               {isStaticDemo && (
                 <p className="status-message">
-                  Demo: los envíos solo existen durante esta sesión y no se comparten con la familia.
+                  Esta demo aún no está conectada al panel familiar: los envíos no llegan a la familia.
                 </p>
               )}
 
@@ -570,10 +549,12 @@ function App() {
               <div className="heart">❤️</div>
               <h2>¡Gracias!</h2>
               <p>
-                Tus fotografías quedaron <span>pendientes de revisión familiar.</span>
+              {isStaticDemo
+                ? 'En esta demo no se enviaron a la familia; al conectar el servidor, las fotografías quedarán en revisión.'
+                : 'Tus fotografías quedaron en revisión por la familia. Próximamente les haremos saber cuáles se publicarán.'}
               </p>
               <p>
-                El nombre y el mensaje solo se mostrarán <span>si la familia publica la foto.</span>
+              El nombre y el mensaje solo aparecerán si la familia publica la fotografía.
               </p>
               <button type="button" className="primary-button" onClick={() => setView('home')}>
                 Ver álbum
@@ -593,6 +574,11 @@ function App() {
             {!isAdminAuthenticated ? (
               <form className="admin-login" onSubmit={handleAdminLogin}>
                 <h2>Administrador</h2>
+                {isStaticDemo && (
+                  <p className="status-message">
+                    El panel se activará cuando el sitio esté conectado al servidor familiar.
+                  </p>
+                )}
                 <label htmlFor="adminPassword">Contraseña</label>
                 <input
                   id="adminPassword"
@@ -602,7 +588,7 @@ function App() {
                   placeholder="••••••••"
                 />
                 {adminError && <p className="status-message error-message">{adminError}</p>}
-                <button type="submit" className="primary-button">
+                <button type="submit" className="primary-button" disabled={isStaticDemo}>
                   Iniciar sesión
                 </button>
               </form>
@@ -619,10 +605,10 @@ function App() {
                         <p>{photo.message || 'Sin mensaje'}</p>
                       </div>
                       <div className="admin-actions">
-                        <button type="button" onClick={() => updatePendingPhoto(photo.id, 'published')}>
+                        <button type="button" onClick={() => updatePhotoStatus(photo.id, 'published')}>
                           Publicar
                         </button>
-                        <button type="button" className="danger" onClick={() => updatePendingPhoto(photo.id, 'rejected')}>
+                        <button type="button" className="danger" onClick={() => updatePhotoStatus(photo.id, 'rejected')}>
                           Rechazar
                         </button>
                         <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
@@ -634,6 +620,31 @@ function App() {
                 ) : (
                   <p className="empty-state">No hay fotos pendientes.</p>
                 )}
+
+                <div className="admin-published">
+                  <h2>Fotos publicadas</h2>
+                  {publishedPhotos.length ? (
+                    publishedPhotos.map((photo) => (
+                      <article key={photo.id} className="admin-photo-item">
+                        <img src={photo.image_url} alt={photo.message || 'Foto publicada'} />
+                        <div className="admin-photo-copy">
+                          <strong>{photo.guest_name || 'Invitado'}</strong>
+                          <p>{photo.message || 'Sin mensaje'}</p>
+                        </div>
+                        <div className="admin-actions">
+                          <button type="button" onClick={() => updatePhotoStatus(photo.id, 'pending')}>
+                            Retirar de publicaciones
+                          </button>
+                          <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
+                            Eliminar
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  ) : (
+                    <p className="empty-state">Aún no hay fotos publicadas.</p>
+                  )}
+                </div>
 
                 <div className="qr-card admin-qr">
                   <div>

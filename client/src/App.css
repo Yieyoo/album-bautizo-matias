@@ -419,6 +419,14 @@
   gap: 14px;
 }
 
+.admin-published {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(189, 149, 103, 0.3);
+}
+
 .admin-photo-item {
   display: grid;
   grid-template-columns: 90px 1fr;
@@ -456,11 +464,12 @@
 .admin-actions {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .admin-actions button {
-  flex: 1;
+  flex: 1 1 100px;
   border: none;
   border-radius: 12px;
   padding: 10px 12px;
@@ -848,6 +857,68 @@
 .gallery-section {
   margin: 0;
   scroll-margin-top: 24px;
+}
+
+.review-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  border-top: 1px solid rgba(189, 149, 103, 0.32);
+  border-bottom: 1px solid rgba(189, 149, 103, 0.32);
+  color: #71879a;
+  text-align: center;
+}
+
+.review-notice-mark {
+  color: #bd9567;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.review-notice h2 {
+  margin: 0;
+  color: #5b7184;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.review-notice p {
+  max-width: 480px;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.review-notice-demo {
+  color: #9a8876;
+  font-size: 0.76rem !important;
+}
+
+.site-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 0 2px;
+}
+
+.family-access {
+  border: 0;
+  background: transparent;
+  color: #a4a09a;
+  padding: 6px 4px;
+  font: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.family-access:hover,
+.family-access:focus-visible {
+  color: #5b7184;
 }
 
 .gallery-heading {

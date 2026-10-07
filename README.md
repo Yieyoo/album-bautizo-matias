@@ -11,9 +11,9 @@ En **Settings → Pages**, selecciona **GitHub Actions** como fuente de publicac
 
 ## Demo y servidor
 
-El formulario conserva los campos **Nombre (opcional)** y **Mensaje (opcional)** junto con las fotografías. Con el servidor configurado, cada envío se guarda con estado `pending`; la familia puede publicarlo, rechazarlo o eliminarlo desde el acceso familiar (`?admin`). El álbum público consulta únicamente fotografías con estado `published`; nombre y mensaje aparecen con la fotografía solo después de publicarla.
+El formulario conserva los campos **Nombre (opcional)** y **Mensaje (opcional)** junto con las fotografías. Con el servidor configurado, cada envío se guarda con estado `pending`; la familia puede publicarlo, rechazarlo o eliminarlo desde el acceso familiar discreto al final de la página. También puede retirar o eliminar fotografías ya publicadas. El álbum público consulta únicamente fotografías con estado `published`; nombre y mensaje aparecen con la fotografía solo después de publicarla.
 
-GitHub Pages es estático: su demo no puede almacenar ni compartir las cargas entre invitados o dispositivos. Para activar el flujo compartido, despliega el servidor Express y configura Cloudinary, PostgreSQL y `ADMIN_PASSWORD` según `server/.env.example`. Después, añade `VITE_API_URL` como variable del repositorio en GitHub con la URL HTTPS del backend y vuelve a desplegar Pages. Sin esa configuración, GitHub Pages seguirá mostrando la galería de demostración e indicará a los invitados que sus cargas no se comparten.
+GitHub Pages es estático: su demo no puede almacenar ni compartir las cargas entre invitados o dispositivos. Sin servidor conectado, el álbum muestra un aviso de que las fotografías están en revisión y no simula que los envíos llegaron a la familia; el acceso familiar también queda desactivado. Para activar el flujo compartido, despliega el servidor Express y configura Cloudinary, PostgreSQL y `ADMIN_PASSWORD` según `server/.env.example`. Después, añade `VITE_API_URL` como variable del repositorio en GitHub con la URL HTTPS del backend y vuelve a desplegar Pages.
 
 ## Desarrollo local
 

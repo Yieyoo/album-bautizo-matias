@@ -3,54 +3,8 @@ import pg from 'pg'
 
 const { Pool } = pg
 
-const basePhotoTemplate = [
-  {
-    id: 'seed-1',
-    guest_name: 'Mamá',
-    message: 'Muchas felicidades Matías ❤️',
-    image_url:
-      'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=900&q=80',
-    cloudinary_public_id: 'seed-1',
-    status: 'published',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'seed-2',
-    guest_name: 'Tío José',
-    message: 'Qué alegría compartir este día contigo.',
-    image_url:
-      'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=900&q=80',
-    cloudinary_public_id: 'seed-2',
-    status: 'published',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'seed-3',
-    guest_name: 'Abuela',
-    message: 'Te queremos muchísimo, Matías.',
-    image_url:
-      'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=900&q=80',
-    cloudinary_public_id: 'seed-3',
-    status: 'published',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'seed-4',
-    guest_name: 'Familia',
-    message: 'Gracias por este recuerdo tan especial.',
-    image_url:
-      'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=80',
-    cloudinary_public_id: 'seed-4',
-    status: 'published',
-    created_at: new Date().toISOString(),
-  },
-]
-
 const memoryStore = {
-  photos: basePhotoTemplate.map((photo) => ({
-    event_id: 'bautizo-matias',
-    ...photo,
-  })),
+  photos: [],
 }
 
 let pool = null
