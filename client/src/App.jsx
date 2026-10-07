@@ -527,15 +527,30 @@ function App() {
         throw new Error(data.message || 'No se pudo descargar la foto.')
       }
 
-      const imageUrl = URL.createObjectURL(await response.blob())
-      const link = document.createElement('a')
-      link.href = imageUrl
-      link.download = `foto-matias-${lightboxIndex + 1}`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1000)
+      const image = await response.blob()
+      const imageExtensions = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+      }
+      const extension = imageExtensions[image.type.toLowerCase()] || 'jpg'
+      const filename = `foto-matias-${lightboxIndex + 1}.${extension}`
+      const imageFile = new File([image], filename, { type: image.type || 'image/jpeg' })
+
+      if (navigator.canShare?.({ files: [imageFile] }) && navigator.share) {
+        await navigator.share({ files: [imageFile], title: 'Foto del bautizo de Matías' })
+      } else {
+        const imageUrl = URL.createObjectURL(image)
+        const link = document.createElement('a')
+        link.href = imageUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.setTimeout(() => URL.revokeObjectURL(imageUrl), 1000)
+      }
     } catch (error) {
+      if (error.name === 'AbortError') return
       console.error('Error downloading photo', error)
       setDownloadError(error.message || 'No se pudo descargar la foto.')
     }
@@ -904,7 +919,7 @@ function App() {
               {lightboxAllowsDownload && (
                 <>
                   <button type="button" className="lightbox-download" onClick={downloadLightboxPhoto}>
-                    Descargar foto
+                    Guardar foto
                   </button>
                   {downloadError && <p className="download-error" role="alert">{downloadError}</p>}
                 </>
