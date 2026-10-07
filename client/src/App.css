@@ -489,6 +489,30 @@
   font-weight: 700;
 }
 
+.save-submission-button {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #6586a0;
+  color: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.save-submission-button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.submission-save-error {
+  margin: 0;
+  color: #8a3e3e;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .select-all-photos,
 .photo-select {
   display: inline-flex;

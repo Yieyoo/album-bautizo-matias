@@ -119,6 +119,8 @@ function App() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
   const [adminError, setAdminError] = useState('')
   const [selectedPhotoIds, setSelectedPhotoIds] = useState([])
+  const [savingSubmissionId, setSavingSubmissionId] = useState(null)
+  const [submissionSaveErrors, setSubmissionSaveErrors] = useState({})
   const fileInputRef = useRef(null)
   const touchStartX = useRef(null)
 
@@ -417,6 +419,14 @@ function App() {
             <span className="submission-count">
               {submission.photos.length} {submission.photos.length === 1 ? 'foto' : 'fotos'}
             </span>
+            <button
+              type="button"
+              className="save-submission-button"
+              onClick={() => saveSubmissionPhotos(submission)}
+              disabled={savingSubmissionId !== null}
+            >
+              {savingSubmissionId === submission.id ? 'Preparando fotos…' : 'Guardar bloque en Fotos'}
+            </button>
             {!isPublished && !isArchived && (
               <label className="select-all-photos">
                 <input
@@ -430,6 +440,9 @@ function App() {
             )}
           </div>
         </header>
+        {submissionSaveErrors[submission.id] && (
+          <p className="submission-save-error" role="alert">{submissionSaveErrors[submission.id]}</p>
+        )}
         <div className="admin-submission-grid">
           {submission.photos.map((photo, index) => (
             <article key={photo.id} className="admin-submission-photo">
@@ -509,6 +522,58 @@ function App() {
     setLightboxPhotos([])
     setLightboxAllowsDownload(false)
     setDownloadError('')
+  }
+
+  async function saveSubmissionPhotos(submission) {
+    if (!isAdminAuthenticated || savingSubmissionId !== null) return
+
+    setSavingSubmissionId(submission.id)
+    setSubmissionSaveErrors((current) => ({ ...current, [submission.id]: '' }))
+
+    try {
+      const files = await Promise.all(submission.photos.map(async (photo, index) => {
+        const response = await fetch(
+          isStaticDemo
+            ? photo.image_url
+            : `${apiUrl}/api/photos/${encodeURIComponent(photo.id)}/download`,
+          isStaticDemo ? undefined : { headers: { Authorization: `Bearer ${adminToken}` } }
+        )
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          throw new Error(data.message || 'No se pudieron preparar todas las fotos.')
+        }
+
+        const image = await response.blob()
+        const extensions = {
+          'image/jpeg': 'jpg',
+          'image/png': 'png',
+          'image/webp': 'webp',
+        }
+        const extension = extensions[image.type.toLowerCase()]
+        if (!extension) throw new Error('Una de las fotos tiene un formato no compatible.')
+
+        return new File([image], `foto-matias-${index + 1}.${extension}`, { type: image.type })
+      }))
+
+      if (!navigator.share || !navigator.canShare?.({ files })) {
+        throw new Error('Este navegador no permite guardar el bloque completo. Ábrelo en Safari para compartir todas las fotos con Fotos.')
+      }
+
+      await navigator.share({
+        files,
+        title: `Fotos de ${submission.guest_name || 'la familia'}`,
+        text: 'Elige Guardar imágenes para añadirlas a Fotos.',
+      })
+    } catch (error) {
+      if (error.name === 'AbortError') return
+      console.error('Error saving photo submission', error)
+      setSubmissionSaveErrors((current) => ({
+        ...current,
+        [submission.id]: error.message || 'No se pudieron guardar las fotos.',
+      }))
+    } finally {
+      setSavingSubmissionId(null)
+    }
   }
 
   async function downloadLightboxPhoto() {
