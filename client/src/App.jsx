@@ -33,6 +33,30 @@ const demoPendingPhotos = [
     image_url: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=900&q=80',
     status: 'pending',
   },
+  {
+    id: 'demo-pending-4',
+    submission_id: 'demo-submission-mariana',
+    guest_name: 'Mariana López',
+    message: 'Un día muy especial para toda la familia. ¡Te queremos, Matías!',
+    image_url: 'https://images.unsplash.com/photo-1566516171511-1c411a59c8ba?auto=format&fit=crop&w=900&q=80',
+    status: 'pending',
+  },
+  {
+    id: 'demo-pending-5',
+    submission_id: 'demo-submission-mariana',
+    guest_name: 'Mariana López',
+    message: 'Un día muy especial para toda la familia. ¡Te queremos, Matías!',
+    image_url: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=800&q=80',
+    status: 'pending',
+  },
+  {
+    id: 'demo-pending-6',
+    submission_id: 'demo-submission-mariana',
+    guest_name: 'Mariana López',
+    message: 'Un día muy especial para toda la familia. ¡Te queremos, Matías!',
+    image_url: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=900&q=80',
+    status: 'pending',
+  },
 ]
 
 const demoPublishedPhotos = [
