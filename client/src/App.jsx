@@ -12,7 +12,7 @@ const fallbackPhotos = [
     guest_name: 'Mamá',
     message: 'Muchas felicidades Matías ❤️',
     image_url:
-      'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1566516171511-1c411a59c8ba?auto=format&fit=crop&w=900&q=80',
   },
   {
     id: 'seed-2',
@@ -26,14 +26,14 @@ const fallbackPhotos = [
     guest_name: 'Abuela',
     message: 'Te queremos muchísimo, Matías.',
     image_url:
-      'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1731743214989-9b4d60937ddf?auto=format&fit=crop&w=900&q=80',
   },
   {
     id: 'seed-4',
     guest_name: 'Familia',
     message: 'Gracias por este recuerdo tan especial.',
     image_url:
-      'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=900&q=80',
   },
 ]
 
@@ -51,6 +51,7 @@ function App() {
   const [adminPassword, setAdminPassword] = useState('')
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
   const [adminError, setAdminError] = useState('')
+  const [showFloatingUpload, setShowFloatingUpload] = useState(false)
   const fileInputRef = useRef(null)
   const touchStartX = useRef(null)
 
@@ -63,6 +64,25 @@ function App() {
       loadPendingPhotos()
     }
   }, [view, isAdminAuthenticated])
+
+  useEffect(() => {
+    if (view !== 'home') {
+      setShowFloatingUpload(false)
+      return undefined
+    }
+
+    const hero = document.querySelector('.hero-panel')
+    if (!hero) {
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowFloatingUpload(!entry.isIntersecting)
+    })
+    observer.observe(hero)
+
+    return () => observer.disconnect()
+  }, [view])
 
   useEffect(() => {
     if (!uploading) {
@@ -287,8 +307,15 @@ function App() {
     document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  function scrollToEventInfo() {
+    document.getElementById('event-info')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   function copyEventLink() {
-    navigator.clipboard?.writeText(shareUrl)
+    navigator.clipboard?.writeText(shareUrl).catch((error) => {
+      console.error('No se pudo copiar el enlace del evento', error)
+      setStatusMessage('No se pudo copiar el enlace. Puedes copiarlo desde la barra del navegador.')
+    })
   }
 
   function downloadQrCode() {
@@ -312,44 +339,67 @@ function App() {
         {view === 'home' && (
           <main className="screen home-screen">
             <div className="topbar">
-              <button type="button" className="link-button" onClick={() => setView('admin')}>
+              <button type="button" className="link-button admin-link" onClick={() => setView('admin')}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="8" r="3.5" />
+                  <path d="M5 20c.4-3.5 3.2-5.5 7-5.5s6.6 2 7 5.5" />
+                </svg>
                 Admin
               </button>
             </div>
 
             <section className="hero-panel">
-              <div className="cross-mark">✝</div>
-              <p className="eyebrow">Bautizo de</p>
-              <h1>MATÍAS</h1>
-              <p className="date-line">7 de noviembre</p>
-              <p className="welcome-text">
-                Gracias por acompañarnos
-                <span>en este día tan especial.</span>
-              </p>
+              <div className="hero-copy">
+                <div className="cross-mark" aria-hidden="true">✝</div>
+                <p className="eyebrow">Bautizo de</p>
+                <h1>MATÍAS</h1>
+                <p className="date-line">7 de noviembre</p>
+                <div className="heart-divider" aria-hidden="true"><span>♡</span></div>
+                <p className="welcome-text">
+                  Gracias por acompañarnos
+                  <span>en este día tan especial.</span>
+                </p>
 
-              <button type="button" className="primary-button" onClick={() => setView('upload')}>
-                📸 Subir fotos
-              </button>
+                <button type="button" className="primary-button hero-cta" onClick={() => setView('upload')}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 7h3l1.4-2h7.2L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                  <span>Compartir mis fotos</span>
+                  <span className="button-chevron" aria-hidden="true">›</span>
+                </button>
 
-              <button type="button" className="secondary-link" onClick={scrollToGallery}>
-                ↓ Ver recuerdos
-              </button>
+                <button type="button" className="secondary-link" onClick={scrollToGallery}>
+                  <span aria-hidden="true">↓</span> Ver recuerdos
+                </button>
+              </div>
             </section>
 
-            <div className="qr-card">
-              <div>
-                <p className="qr-title">Código del evento</p>
-                <p className="qr-subtitle">Escanéalo desde tu móvil</p>
+            <div className="qr-card" id="event-info">
+              <div className="qr-code">
+                <QRCode id="event-qr" value={shareUrl} size={100} bgColor="#ffffff" fgColor="#263b4d" />
               </div>
-              <QRCode id="event-qr" value={shareUrl} size={92} bgColor="#ffffff" fgColor="#1b2b3d" />
+              <div className="qr-copy">
+                <p className="qr-title">Código del evento</p>
+                <p className="qr-subtitle">Escanéalo desde tu móvil para compartir tus fotos</p>
+              </div>
+              <button type="button" className="qr-share" onClick={copyEventLink} aria-label="Copiar enlace del evento">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="18" cy="5" r="3" />
+                  <circle cx="6" cy="12" r="3" />
+                  <circle cx="18" cy="19" r="3" />
+                  <path d="m8.7 10.6 6.6-4.2M8.7 13.4l6.6 4.2" />
+                </svg>
+                <span>Compartir<br />enlace</span>
+              </button>
             </div>
 
             <section className="gallery-section" id="gallery">
-              <div className="section-head">
+              <div className="gallery-heading">
+                <div className="title-divider" aria-hidden="true" />
                 <h2>Recuerdos</h2>
-                <button type="button" className="share-button" onClick={() => setView('upload')}>
-                  📸 Compartir mis fotos
-                </button>
+                <div className="title-divider" aria-hidden="true" />
+                <p>Un pequeño álbum de este gran día</p>
               </div>
 
               {approvedPhotos.length ? (
@@ -370,6 +420,46 @@ function App() {
                 <p className="empty-state">Aún no hay recuerdos compartidos.</p>
               )}
             </section>
+
+            <div className="home-status" aria-live="polite">
+              {statusMessage && <p className="status-message">{statusMessage}</p>}
+            </div>
+
+            {showFloatingUpload && (
+              <div className="floating-upload">
+                <button type="button" className="floating-upload-button" onClick={() => setView('upload')}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 7h3l1.4-2h7.2L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                  Subir fotos
+                </button>
+              </div>
+            )}
+
+            <nav className="bottom-nav" aria-label="Navegación del álbum">
+              <button type="button" className="active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z" />
+                </svg>
+                Inicio
+              </button>
+              <button type="button" onClick={scrollToGallery}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="3" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+                Recuerdos
+              </button>
+              <button type="button" onClick={scrollToEventInfo}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 11v5m0-8h.01" />
+                </svg>
+                Información
+              </button>
+            </nav>
           </main>
         )}
 
