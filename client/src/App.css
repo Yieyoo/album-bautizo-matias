@@ -618,43 +618,13 @@
 
 .screen {
   min-height: 100vh;
-  padding: 0 40px 150px;
+  padding: 0 40px 40px;
 }
 
 .home-screen {
   position: relative;
   display: block;
   padding-top: 1px;
-}
-
-.topbar {
-  position: absolute;
-  top: 22px;
-  right: 40px;
-  z-index: 3;
-  padding: 0;
-}
-
-.admin-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 11px 18px;
-  border: 1px solid rgba(121, 126, 128, 0.1);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #777b7d;
-  box-shadow: 0 6px 18px rgba(66, 64, 60, 0.1);
-}
-
-.admin-link svg {
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .hero-panel {
@@ -957,54 +927,6 @@
   pointer-events: auto;
 }
 
-.bottom-nav {
-  position: fixed;
-  z-index: 7;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  width: min(100%, 920px);
-  min-height: 84px;
-  margin: 0 auto;
-  padding: 10px 20px max(10px, env(safe-area-inset-bottom));
-  border: 1px solid rgba(122, 123, 123, 0.08);
-  border-bottom: 0;
-  border-radius: 28px 28px 0 0;
-  background: rgba(255, 253, 250, 0.94);
-  box-shadow: 0 -8px 28px rgba(55, 60, 63, 0.07);
-  backdrop-filter: blur(16px);
-}
-
-.bottom-nav button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  border: 0;
-  background: transparent;
-  color: #8b9095;
-  font: inherit;
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-
-.bottom-nav button.active {
-  color: #5a7f9b;
-}
-
-.bottom-nav svg {
-  width: 28px;
-  height: 28px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .upload-screen,
 .confirm-screen,
 .admin-screen {
@@ -1018,16 +940,11 @@
     padding-left: 18px;
   }
 
-  .topbar {
-    top: 16px;
-    right: 18px;
-  }
-
   .hero-panel {
     min-height: 570px;
     margin-right: -18px;
     margin-left: -18px;
-    padding: 116px 18px 20px;
+    padding: 202px 18px 20px;
   }
 
   .hero-panel::before {
@@ -1037,6 +954,22 @@
   .hero-panel::after {
     top: 178px;
     height: 170px;
+  }
+
+  .eyebrow {
+    font-size: 0.92rem;
+    letter-spacing: 0.2em;
+  }
+
+  .hero-panel h1 {
+    margin-top: 6px;
+    font-size: clamp(3rem, 11vw, 3.7rem);
+    letter-spacing: 0.025em;
+    line-height: 1.08;
+  }
+
+  .date-line {
+    font-size: 1.65rem;
   }
 
   .hero-cta {
@@ -1105,7 +1038,7 @@
   }
 
   .floating-upload {
-    bottom: 94px;
+    bottom: 20px;
     margin-top: -60px;
   }
 
@@ -1119,10 +1052,6 @@
   .screen {
     padding-right: 56px;
     padding-left: 56px;
-  }
-
-  .topbar {
-    right: 56px;
   }
 
   .hero-panel {
@@ -1161,14 +1090,6 @@
 
   .hero-cta {
     min-height: 66px;
-  }
-
-  .bottom-nav {
-    position: static;
-    min-height: 88px;
-    margin: 0 -56px;
-    width: auto;
-    border-radius: 28px 28px 0 0;
   }
 
   .gallery-grid {

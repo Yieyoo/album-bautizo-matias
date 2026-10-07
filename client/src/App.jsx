@@ -300,10 +300,6 @@ function App() {
     document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  function scrollToEventInfo() {
-    document.getElementById('event-info')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
-
   function copyEventLink() {
     navigator.clipboard?.writeText(shareUrl).catch((error) => {
       console.error('No se pudo copiar el enlace del evento', error)
@@ -331,16 +327,6 @@ function App() {
       <div className="phone-frame">
         {view === 'home' && (
           <main className="screen home-screen">
-            <div className="topbar">
-              <button type="button" className="link-button admin-link" onClick={() => setView('admin')}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="8" r="3.5" />
-                  <path d="M5 20c.4-3.5 3.2-5.5 7-5.5s6.6 2 7 5.5" />
-                </svg>
-                Admin
-              </button>
-            </div>
-
             <section className="hero-panel">
               <div className="hero-copy">
                 <p className="eyebrow">Bautizo de</p>
@@ -429,29 +415,6 @@ function App() {
               </div>
             )}
 
-            <nav className="bottom-nav" aria-label="Navegación del álbum">
-              <button type="button" className="active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z" />
-                </svg>
-                Inicio
-              </button>
-              <button type="button" onClick={scrollToGallery}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="3" y="3" width="18" height="18" rx="3" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <path d="m21 15-5-5L5 21" />
-                </svg>
-                Recuerdos
-              </button>
-              <button type="button" onClick={scrollToEventInfo}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 11v5m0-8h.01" />
-                </svg>
-                Información
-              </button>
-            </nav>
           </main>
         )}
 
