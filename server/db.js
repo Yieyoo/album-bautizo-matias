@@ -31,10 +31,14 @@ async function ensureTable() {
       message TEXT,
       image_url TEXT NOT NULL,
       cloudinary_public_id TEXT,
+      submission_id UUID,
       status TEXT NOT NULL DEFAULT 'pending',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `)
+  await db.query(
+    'ALTER TABLE photos ADD COLUMN IF NOT EXISTS submission_id UUID'
+  )
   await db.query(
     'UPDATE photos SET status = $1 WHERE status = $2',
     ['published', 'approved']
@@ -49,6 +53,7 @@ function normalizePhoto(photo) {
     message: photo.message ?? '',
     image_url: photo.image_url,
     cloudinary_public_id: photo.cloudinary_public_id ?? photo.id,
+    submission_id: photo.submission_id ?? photo.id,
     status: photo.status ?? 'pending',
     created_at: photo.created_at ?? new Date().toISOString(),
   }
@@ -86,6 +91,7 @@ export async function getPendingPhotos() {
 
 export async function createPhotosFromUpload(files, guestName, message) {
   const db = ensureDatabaseConnection()
+  const submissionId = randomUUID()
   const records = files.map((file) => {
     const id = randomUUID()
     return normalizePhoto({
@@ -95,6 +101,7 @@ export async function createPhotosFromUpload(files, guestName, message) {
       message: message?.trim() || '',
       image_url: file.image_url,
       cloudinary_public_id: file.cloudinary_public_id || id,
+      submission_id: submissionId,
       status: 'pending',
       created_at: new Date().toISOString(),
     })
@@ -105,8 +112,8 @@ export async function createPhotosFromUpload(files, guestName, message) {
 
     for (const record of records) {
       await db.query(
-        `INSERT INTO photos (id, event_id, guest_name, message, image_url, cloudinary_public_id, status, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        `INSERT INTO photos (id, event_id, guest_name, message, image_url, cloudinary_public_id, submission_id, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
           record.id,
           record.event_id,
@@ -114,6 +121,7 @@ export async function createPhotosFromUpload(files, guestName, message) {
           record.message,
           record.image_url,
           record.cloudinary_public_id,
+          record.submission_id,
           record.status,
           record.created_at,
         ]

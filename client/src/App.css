@@ -59,7 +59,7 @@
 .share-button,
 .primary-button,
 .remove-photo,
-.admin-actions button,
+.admin-submission-actions button,
 .nav-button,
 .lightbox-close,
 .secondary-action {
@@ -160,7 +160,7 @@
 .share-button:hover,
 .submit-button:hover,
 .secondary-action:hover,
-.admin-actions button:hover {
+.admin-submission-actions button:hover {
   filter: brightness(0.98);
 }
 
@@ -255,7 +255,7 @@
 
 .photo-card img,
 .selected-photo img,
-.admin-photo-item img {
+.admin-submission-photo img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -454,20 +454,21 @@
   border-top: 1px solid rgba(189, 149, 103, 0.3);
 }
 
-.admin-photo-item {
-  display: grid;
-  grid-template-columns: 90px 1fr;
+.admin-submission {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: center;
-  padding: 10px;
+  padding: 14px;
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(247,243,236,0.95), rgba(241,245,249,0.9));
-  border: 1px solid rgba(183,170,160,0.2);
+  border: 1px solid rgba(183,170,160,0.24);
 }
 
-.admin-photo-item img {
-  height: 90px;
-  border-radius: 12px;
+.admin-submission-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .admin-photo-copy {
@@ -488,25 +489,63 @@
   line-height: 1.5;
 }
 
-.admin-actions {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.submission-count {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e7eef4;
+  color: #526d82;
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
-.admin-actions button {
-  flex: 1 1 100px;
+.admin-submission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-submission-photo {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(154, 167, 181, 0.22);
+}
+
+.admin-submission-photo img {
+  aspect-ratio: 1;
+}
+
+.admin-submission-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+}
+
+.admin-submission-actions button {
+  min-width: 0;
   border: none;
-  border-radius: 12px;
-  padding: 10px 12px;
+  border-radius: 9px;
+  padding: 8px 5px;
   background: #dfeaf5;
   color: #24415e;
+  font: inherit;
+  font-size: 0.72rem;
   font-weight: 800;
   cursor: pointer;
 }
 
-.admin-actions .danger {
+.admin-submission-actions button:hover {
+  filter: brightness(0.97);
+}
+
+.admin-submission-actions button:last-child:nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.admin-submission-actions .danger {
   background: #f5e0df;
   color: #8a3e3e;
 }

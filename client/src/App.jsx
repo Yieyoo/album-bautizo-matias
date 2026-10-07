@@ -11,16 +11,26 @@ const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}`
 const demoPendingPhotos = [
   {
     id: 'demo-pending-1',
-    guest_name: 'Tía Mariana',
+    submission_id: 'demo-submission-mariana',
+    guest_name: 'Mariana López',
     message: 'Un día muy especial para toda la familia. ¡Te queremos, Matías!',
     image_url: 'https://images.unsplash.com/photo-1731743214989-9b4d60937ddf?auto=format&fit=crop&w=900&q=80',
     status: 'pending',
   },
   {
     id: 'demo-pending-2',
-    guest_name: 'Abuelita',
-    message: 'Que Dios te acompañe y bendiga siempre.',
+    submission_id: 'demo-submission-mariana',
+    guest_name: 'Mariana López',
+    message: 'Un día muy especial para toda la familia. ¡Te queremos, Matías!',
     image_url: 'https://images.unsplash.com/photo-1787214091915-994e9806ff9d?auto=format&fit=crop&w=900&q=80',
+    status: 'pending',
+  },
+  {
+    id: 'demo-pending-3',
+    submission_id: 'demo-submission-mariana',
+    guest_name: 'Mariana López',
+    message: 'Un día muy especial para toda la familia. ¡Te queremos, Matías!',
+    image_url: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=900&q=80',
     status: 'pending',
   },
 ]
@@ -28,12 +38,40 @@ const demoPendingPhotos = [
 const demoPublishedPhotos = [
   {
     id: 'demo-published-1',
+    submission_id: 'demo-submission-carlos',
     guest_name: 'Familia García',
     message: 'Celebrando juntos este hermoso día.',
     image_url: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=900&q=80',
     status: 'published',
   },
+  {
+    id: 'demo-published-2',
+    submission_id: 'demo-submission-carlos',
+    guest_name: 'Familia García',
+    message: 'Celebrando juntos este hermoso día.',
+    image_url: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=900&q=80',
+    status: 'published',
+  },
 ]
+
+function groupPhotosBySubmission(photos) {
+  const groups = new Map()
+
+  photos.forEach((photo) => {
+    const submissionId = photo.submission_id || photo.id
+    if (!groups.has(submissionId)) {
+      groups.set(submissionId, {
+        id: submissionId,
+        guest_name: photo.guest_name,
+        message: photo.message,
+        photos: [],
+      })
+    }
+    groups.get(submissionId).photos.push(photo)
+  })
+
+  return Array.from(groups.values())
+}
 
 function App() {
   const [publishedPhotos, setPublishedPhotos] = useState([])
@@ -281,6 +319,48 @@ function App() {
 
     await loadPendingPhotos()
     await loadPublishedPhotos()
+  }
+
+  function renderPhotoSubmissions(photos, isPublished = false) {
+    return groupPhotosBySubmission(photos).map((submission) => (
+      <article key={submission.id} className="admin-submission">
+        <header className="admin-submission-header">
+          <div className="admin-photo-copy">
+            <strong>{submission.guest_name || 'Invitado'}</strong>
+            <p>{submission.message || 'Sin mensaje'}</p>
+          </div>
+          <span className="submission-count">
+            {submission.photos.length} {submission.photos.length === 1 ? 'foto' : 'fotos'}
+          </span>
+        </header>
+        <div className="admin-submission-grid">
+          {submission.photos.map((photo, index) => (
+            <article key={photo.id} className="admin-submission-photo">
+              <img src={photo.image_url} alt={`Foto ${index + 1} de ${submission.guest_name || 'invitado'}`} />
+              <div className="admin-submission-actions">
+                {isPublished ? (
+                  <button type="button" onClick={() => updatePhotoStatus(photo.id, 'pending')}>
+                    Retirar
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => updatePhotoStatus(photo.id, 'published')}>
+                      Publicar
+                    </button>
+                    <button type="button" className="danger" onClick={() => updatePhotoStatus(photo.id, 'rejected')}>
+                      Rechazar
+                    </button>
+                  </>
+                )}
+                <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
+                  Eliminar
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </article>
+    ))
   }
 
   function openLightbox(index) {
@@ -615,26 +695,7 @@ function App() {
                 )}
                 {adminError && <p className="status-message error-message">{adminError}</p>}
                 {pendingPhotos.length ? (
-                  pendingPhotos.map((photo) => (
-                    <article key={photo.id} className="admin-photo-item">
-                      <img src={photo.image_url} alt={photo.message || 'Foto pendiente'} />
-                      <div className="admin-photo-copy">
-                        <strong>{photo.guest_name || 'Invitado'}</strong>
-                        <p>{photo.message || 'Sin mensaje'}</p>
-                      </div>
-                      <div className="admin-actions">
-                        <button type="button" onClick={() => updatePhotoStatus(photo.id, 'published')}>
-                          Publicar
-                        </button>
-                        <button type="button" className="danger" onClick={() => updatePhotoStatus(photo.id, 'rejected')}>
-                          Rechazar
-                        </button>
-                        <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
-                          Eliminar
-                        </button>
-                      </div>
-                    </article>
-                  ))
+                  renderPhotoSubmissions(pendingPhotos)
                 ) : (
                   <p className="empty-state">No hay fotos pendientes.</p>
                 )}
@@ -642,23 +703,7 @@ function App() {
                 <div className="admin-published">
                   <h2>Fotos publicadas</h2>
                   {publishedPhotos.length ? (
-                    publishedPhotos.map((photo) => (
-                      <article key={photo.id} className="admin-photo-item">
-                        <img src={photo.image_url} alt={photo.message || 'Foto publicada'} />
-                        <div className="admin-photo-copy">
-                          <strong>{photo.guest_name || 'Invitado'}</strong>
-                          <p>{photo.message || 'Sin mensaje'}</p>
-                        </div>
-                        <div className="admin-actions">
-                          <button type="button" onClick={() => updatePhotoStatus(photo.id, 'pending')}>
-                            Retirar de publicaciones
-                          </button>
-                          <button type="button" className="danger" onClick={() => deletePhoto(photo.id)}>
-                            Eliminar
-                          </button>
-                        </div>
-                      </article>
-                    ))
+                    renderPhotoSubmissions(publishedPhotos, true)
                   ) : (
                     <p className="empty-state">Aún no hay fotos publicadas.</p>
                   )}
