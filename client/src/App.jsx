@@ -3,7 +3,8 @@ import QRCode from 'react-qr-code'
 import './App.css'
 
 const validImageTypes = ['image/jpeg', 'image/png', 'image/webp']
-const shareUrl = 'https://example.com/bautizo/matias'
+const isStaticDemo = import.meta.env.PROD
+const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}`
 
 const fallbackPhotos = [
   {
@@ -82,6 +83,10 @@ function App() {
   }, [uploading])
 
   async function loadApprovedPhotos() {
+    if (isStaticDemo) {
+      return
+    }
+
     try {
       const response = await fetch('/api/photos?status=approved')
       const data = await response.json()
@@ -94,6 +99,10 @@ function App() {
   }
 
   async function loadPendingPhotos() {
+    if (isStaticDemo) {
+      return
+    }
+
     try {
       const response = await fetch('/api/photos?status=pending')
       const data = await response.json()
@@ -144,15 +153,27 @@ function App() {
       setUploadProgress(10)
       setStatusMessage('Subiendo tus fotos...')
 
-      const response = await fetch('/api/photos', {
-        method: 'POST',
-        body: formData,
-      })
+      let data
+      if (isStaticDemo) {
+        const demoPhotos = selectedFiles.map((file) => ({
+          id: `demo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          guest_name: guestName,
+          message,
+          image_url: URL.createObjectURL(file),
+        }))
 
-      const data = await response.json()
+        setPendingPhotos((current) => [...demoPhotos, ...current])
+        data = { message: 'Fotos añadidas a esta demo en este navegador.' }
+      } else {
+        const response = await fetch('/api/photos', {
+          method: 'POST',
+          body: formData,
+        })
 
-      if (!response.ok) {
-        throw new Error(data.message || 'No se pudieron guardar las fotos.')
+        data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.message || 'No se pudieron guardar las fotos.')
+        }
       }
 
       setUploadProgress(100)
@@ -186,6 +207,15 @@ function App() {
   }
 
   async function approvePhoto(id) {
+    if (isStaticDemo) {
+      const photo = pendingPhotos.find((item) => item.id === id)
+      if (photo) {
+        setPendingPhotos((current) => current.filter((item) => item.id !== id))
+        setApprovedPhotos((current) => [...current, photo])
+      }
+      return
+    }
+
     await fetch(`/api/photos/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -197,6 +227,16 @@ function App() {
   }
 
   async function deletePhoto(id) {
+    if (isStaticDemo) {
+      const photo = pendingPhotos.find((item) => item.id === id)
+      if (photo?.image_url.startsWith('blob:')) {
+        URL.revokeObjectURL(photo.image_url)
+      }
+      setPendingPhotos((current) => current.filter((item) => item.id !== id))
+      setApprovedPhotos((current) => current.filter((item) => item.id !== id))
+      return
+    }
+
     await fetch(`/api/photos/${id}`, {
       method: 'DELETE',
     })
@@ -252,7 +292,7 @@ function App() {
   }
 
   function downloadQrCode() {
-    const svg = document.getElementById('event-qr')
+    const svg = document.querySelector('#event-qr, #admin-qr')
     if (!svg) return
 
     const serializer = new XMLSerializer()
@@ -343,6 +383,11 @@ function App() {
 
             <div className="upload-panel">
               <h2>Selecciona tus fotos</h2>
+              {isStaticDemo && (
+                <p className="status-message">
+                  Demo: las fotos se muestran solo en este navegador y no se guardan en línea.
+                </p>
+              )}
 
               <input
                 ref={fileInputRef}
