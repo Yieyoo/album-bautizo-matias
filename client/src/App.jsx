@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import QRCode from 'react-qr-code'
 import './App.css'
+import { prepareImageForUpload } from './prepareImage.js'
 
 const validImageTypes = ['image/jpeg', 'image/png', 'image/webp']
 const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
@@ -222,11 +223,11 @@ function App() {
   function handlePhotoPick(event) {
     const files = Array.from(event.target.files ?? [])
     const validFiles = files.filter(
-      (file) => validImageTypes.includes(file.type) && file.size <= 15 * 1024 * 1024
+      (file) => validImageTypes.includes(file.type) && file.size <= 60 * 1024 * 1024
     )
 
     if (!validFiles.length) {
-      setStatusMessage('Solo JPG, JPEG, PNG y WEBP hasta 15 MB.')
+      setStatusMessage('Solo se permiten fotos JPG, JPEG, PNG y WEBP.')
       return
     }
 
@@ -255,13 +256,19 @@ function App() {
       return
     }
 
-    const formData = new FormData()
-    selectedFiles.forEach((file) => formData.append('photos', file))
-    formData.append('guestName', guestName)
-    formData.append('message', message)
-
     try {
       setUploading(true)
+      setUploadProgress(5)
+      setStatusMessage('Preparando tus fotos...')
+
+      // Una a la vez para no agotar la memoria del celular con fotos grandes
+      const formData = new FormData()
+      for (const file of selectedFiles) {
+        formData.append('photos', await prepareImageForUpload(file))
+      }
+      formData.append('guestName', guestName)
+      formData.append('message', message)
+
       setUploadProgress(10)
       setStatusMessage('Subiendo tus fotos...')
 
