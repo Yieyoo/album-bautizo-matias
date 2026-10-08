@@ -111,6 +111,7 @@ function App() {
   const [lightboxPhotos, setLightboxPhotos] = useState([])
   const [lightboxAllowsDownload, setLightboxAllowsDownload] = useState(false)
   const [downloadError, setDownloadError] = useState('')
+  const preparedPhotoFiles = useRef(new Map())
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [statusMessage, setStatusMessage] = useState('')
@@ -617,6 +618,51 @@ function App() {
     setDownloadError('')
   }
 
+  // Las fotos descargadas se guardan para que un segundo toque pueda abrir
+  // el menú de compartir al instante, cuando el primero tardó demasiado
+  // y el navegador ya no lo considera una acción del usuario.
+  async function getPhotoFile(photo, index) {
+    const cachedFile = preparedPhotoFiles.current.get(photo.id)
+    if (cachedFile) return cachedFile
+
+    const response = await fetch(
+      isStaticDemo
+        ? photo.image_url
+        : `${apiUrl}/api/photos/${encodeURIComponent(photo.id)}/download`,
+      isStaticDemo ? undefined : { headers: { Authorization: `Bearer ${adminToken}` } }
+    )
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data.message || 'No se pudo descargar la foto.')
+    }
+
+    const image = await response.blob()
+    const extensions = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    }
+    const extension = extensions[image.type.toLowerCase()]
+    if (!extension) throw new Error('Una de las fotos tiene un formato no compatible.')
+
+    const file = new File([image], `foto-matias-${index + 1}.${extension}`, { type: image.type })
+    preparedPhotoFiles.current.set(photo.id, file)
+    return file
+  }
+
+  async function sharePhotoFiles(files) {
+    // Sin title ni text: si se comparten junto a las imágenes, iOS oculta
+    // "Guardar imagen" y solo ofrece "Guardar en Archivos".
+    try {
+      await navigator.share({ files })
+    } catch (error) {
+      if (error.name === 'NotAllowedError') {
+        throw new Error('Las fotos ya están listas. Toca el botón otra vez y elige "Guardar imagen".')
+      }
+      throw error
+    }
+  }
+
   async function saveSubmissionPhotos(submission) {
     if (!isAdminAuthenticated || savingSubmissionId !== null) return
 
@@ -624,39 +670,13 @@ function App() {
     setSubmissionSaveErrors((current) => ({ ...current, [submission.id]: '' }))
 
     try {
-      const files = await Promise.all(submission.photos.map(async (photo, index) => {
-        const response = await fetch(
-          isStaticDemo
-            ? photo.image_url
-            : `${apiUrl}/api/photos/${encodeURIComponent(photo.id)}/download`,
-          isStaticDemo ? undefined : { headers: { Authorization: `Bearer ${adminToken}` } }
-        )
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}))
-          throw new Error(data.message || 'No se pudieron preparar todas las fotos.')
-        }
-
-        const image = await response.blob()
-        const extensions = {
-          'image/jpeg': 'jpg',
-          'image/png': 'png',
-          'image/webp': 'webp',
-        }
-        const extension = extensions[image.type.toLowerCase()]
-        if (!extension) throw new Error('Una de las fotos tiene un formato no compatible.')
-
-        return new File([image], `foto-matias-${index + 1}.${extension}`, { type: image.type })
-      }))
+      const files = await Promise.all(submission.photos.map(getPhotoFile))
 
       if (!navigator.share || !navigator.canShare?.({ files })) {
         throw new Error('Este navegador no permite guardar el bloque completo. Ábrelo en Safari para compartir todas las fotos con Fotos.')
       }
 
-      await navigator.share({
-        files,
-        title: `Fotos de ${submission.guest_name || 'la familia'}`,
-        text: 'Elige Guardar imágenes para añadirlas a Fotos.',
-      })
+      await sharePhotoFiles(files)
     } catch (error) {
       if (error.name === 'AbortError') return
       console.error('Error saving photo submission', error)
@@ -673,35 +693,17 @@ function App() {
     const photo = lightboxPhotos[lightboxIndex]
     if (!photo || !lightboxAllowsDownload) return
 
+    setDownloadError('')
     try {
-      const response = await fetch(
-        isStaticDemo
-          ? photo.image_url
-          : `${apiUrl}/api/photos/${encodeURIComponent(photo.id)}/download`,
-        isStaticDemo ? undefined : { headers: { Authorization: `Bearer ${adminToken}` } }
-      )
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.message || 'No se pudo descargar la foto.')
-      }
-
-      const image = await response.blob()
-      const imageExtensions = {
-        'image/jpeg': 'jpg',
-        'image/png': 'png',
-        'image/webp': 'webp',
-      }
-      const extension = imageExtensions[image.type.toLowerCase()] || 'jpg'
-      const filename = `foto-matias-${lightboxIndex + 1}.${extension}`
-      const imageFile = new File([image], filename, { type: image.type || 'image/jpeg' })
+      const imageFile = await getPhotoFile(photo, lightboxIndex)
 
       if (navigator.canShare?.({ files: [imageFile] }) && navigator.share) {
-        await navigator.share({ files: [imageFile], title: 'Foto del bautizo de Matías' })
+        await sharePhotoFiles([imageFile])
       } else {
-        const imageUrl = URL.createObjectURL(image)
+        const imageUrl = URL.createObjectURL(imageFile)
         const link = document.createElement('a')
         link.href = imageUrl
-        link.download = filename
+        link.download = imageFile.name
         document.body.appendChild(link)
         link.click()
         link.remove()

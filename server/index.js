@@ -209,6 +209,7 @@ app.get('/api/photos/:id/download', async (req, res) => {
     const isAllowedHost =
       imageUrl.protocol === 'https:' &&
       (imageUrl.hostname === 'images.unsplash.com' ||
+        imageUrl.hostname === 'res.cloudinary.com' ||
         imageUrl.hostname.endsWith('.res.cloudinary.com'))
     if (!isAllowedHost) {
       return res.status(502).json({ message: 'No se pudo descargar la foto.' })
