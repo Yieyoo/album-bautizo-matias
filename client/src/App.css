@@ -600,6 +600,12 @@
   filter: brightness(0.97);
 }
 
+.admin-submission-actions button:disabled,
+.submission-bulk-actions button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .admin-submission-actions button:last-child:nth-child(3) {
   grid-column: 1 / -1;
 }

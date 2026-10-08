@@ -207,3 +207,22 @@ export async function updatePhotoStatus(id, status) {
 
   return normalizePhoto(memoryStore.photos[photoIndex])
 }
+
+export async function deletePhotoById(id) {
+  const db = ensureDatabaseConnection()
+
+  if (db) {
+    await ensureTable()
+    const result = await db.query(
+      'DELETE FROM photos WHERE id = $1 RETURNING *',
+      [id]
+    )
+    return result.rows[0] ? normalizePhoto(result.rows[0]) : null
+  }
+
+  const photoIndex = memoryStore.photos.findIndex((photo) => photo.id === id)
+  if (photoIndex === -1) return null
+
+  const [photo] = memoryStore.photos.splice(photoIndex, 1)
+  return normalizePhoto(photo)
+}

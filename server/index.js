@@ -5,6 +5,7 @@ import express from 'express'
 import multer from 'multer'
 import {
   createPhotosFromUpload,
+  deletePhotoById,
   getPhotoById,
   getPublishedPhotos,
   getPendingPhotos,
@@ -13,6 +14,7 @@ import {
 } from './db.js'
 import {
   deleteFromCloudinary,
+  deletePhotoFromCloudinary,
   isCloudinaryConfigured,
   logCloudinaryUploadDiagnostics,
   uploadBufferToCloudinary,
@@ -264,6 +266,37 @@ app.patch('/api/photos/:id', async (req, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: 'No se pudo actualizar la foto.' })
+  }
+})
+
+app.delete('/api/photos/:id', async (req, res) => {
+  if (!isAdminAuthenticated(req)) {
+    return res.status(401).json({ message: 'Inicia sesión para eliminar fotografías.' })
+  }
+
+  const { id } = req.params
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return res.status(400).json({ message: 'Identificador de foto no válido.' })
+  }
+
+  try {
+    const photo = await deletePhotoById(id)
+    if (!photo) {
+      return res.status(404).json({ message: 'Foto no encontrada.' })
+    }
+
+    let warning
+    try {
+      await deletePhotoFromCloudinary(photo.cloudinary_public_id)
+    } catch (error) {
+      console.error('Photo deleted from album but Cloudinary cleanup failed', error)
+      warning = 'La foto se quitó del álbum, pero no se pudo borrar su archivo de Cloudinary.'
+    }
+
+    res.json({ photo: { id: photo.id }, warning })
+  } catch (error) {
+    console.error('Error deleting photo', error)
+    res.status(500).json({ message: 'No se pudo eliminar la foto.' })
   }
 })
 

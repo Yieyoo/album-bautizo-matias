@@ -115,3 +115,14 @@ export async function deleteFromCloudinary(publicIds) {
     publicIds.map((publicId) => cloudinary.uploader.destroy(publicId))
   )
 }
+
+export async function deletePhotoFromCloudinary(publicId) {
+  if (!isCloudinaryConfigured()) {
+    throw new Error('Cloudinary no está configurado.')
+  }
+
+  const result = await cloudinary.uploader.destroy(publicId)
+  if (!['ok', 'not found'].includes(result.result)) {
+    throw new Error(`Cloudinary no pudo eliminar la imagen (${result.result}).`)
+  }
+}

@@ -118,7 +118,9 @@ function App() {
   const [adminToken, setAdminToken] = useState('')
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
   const [adminError, setAdminError] = useState('')
+  const [adminNotice, setAdminNotice] = useState('')
   const [selectedPhotoIds, setSelectedPhotoIds] = useState([])
+  const [deletingPhotoIds, setDeletingPhotoIds] = useState([])
   const [savingSubmissionId, setSavingSubmissionId] = useState(null)
   const [submissionSaveErrors, setSubmissionSaveErrors] = useState({})
   const fileInputRef = useRef(null)
@@ -401,6 +403,69 @@ function App() {
     }
   }
 
+  async function deletePhoto(id, confirmDeletion = true) {
+    if (
+      confirmDeletion &&
+      !window.confirm('¿Eliminar esta foto definitivamente? Esta acción no se puede deshacer.')
+    ) {
+      return false
+    }
+
+    setAdminError('')
+    setAdminNotice('')
+    setDeletingPhotoIds((current) => [...current, id])
+
+    try {
+      let warning = ''
+      if (isStaticDemo) {
+        setPendingPhotos((current) => current.filter((photo) => photo.id !== id))
+        setPublishedPhotos((current) => current.filter((photo) => photo.id !== id))
+        setArchivedPhotos((current) => current.filter((photo) => photo.id !== id))
+      } else {
+        const response = await fetch(`${apiUrl}/api/photos/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: { Authorization: 'Bearer ' + adminToken },
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.message || 'No se pudo eliminar la foto.')
+        }
+        warning = data.warning || ''
+        setPendingPhotos((current) => current.filter((photo) => photo.id !== id))
+        setPublishedPhotos((current) => current.filter((photo) => photo.id !== id))
+        setArchivedPhotos((current) => current.filter((photo) => photo.id !== id))
+      }
+
+      setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
+      if (warning) setAdminNotice(warning)
+      return true
+    } catch (error) {
+      console.error('Error deleting photo', error)
+      setAdminError(error.message || 'No se pudo eliminar la foto.')
+      return false
+    } finally {
+      setDeletingPhotoIds((current) => current.filter((photoId) => photoId !== id))
+    }
+  }
+
+  async function deleteSelectedPhotos(photos) {
+    const selected = photos.filter((photo) => selectedPhotoIds.includes(photo.id))
+    if (!selected.length) return
+
+    const confirmation = selected.length === 1
+      ? '¿Eliminar definitivamente la foto seleccionada? Esta acción no se puede deshacer.'
+      : `¿Eliminar definitivamente las ${selected.length} fotos seleccionadas? Esta acción no se puede deshacer.`
+    if (!window.confirm(confirmation)) return
+
+    const results = await Promise.all(
+      selected.map((photo) => deletePhoto(photo.id, false))
+    )
+    const failedCount = results.filter((result) => !result).length
+    if (failedCount) {
+      setAdminNotice(`${selected.length - failedCount} foto(s) eliminada(s); ${failedCount} no se pudieron eliminar.`)
+    }
+  }
+
   async function loadArchivedPhotos() {
     if (isStaticDemo) return
 
@@ -501,6 +566,14 @@ function App() {
                     </button>
                   </>
                 )}
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={() => deletePhoto(photo.id)}
+                  disabled={deletingPhotoIds.includes(photo.id)}
+                >
+                  {deletingPhotoIds.includes(photo.id) ? 'Eliminando…' : 'Eliminar'}
+                </button>
               </div>
             </article>
           ))}
@@ -515,6 +588,14 @@ function App() {
             </button>
             <button type="button" onClick={() => moderateSelectedPhotos(submission.photos, 'archived')}>
               Archivar seleccionadas
+            </button>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => deleteSelectedPhotos(submission.photos)}
+              disabled={submission.photos.some((photo) => deletingPhotoIds.includes(photo.id))}
+            >
+              Eliminar seleccionadas
             </button>
           </div>
         )}
@@ -930,6 +1011,7 @@ function App() {
               <section className="admin-panel">
                 <h2>Fotos pendientes</h2>
                 {adminError && <p className="status-message error-message">{adminError}</p>}
+                {adminNotice && <p className="status-message" role="status">{adminNotice}</p>}
                 {pendingPhotos.length ? (
                   renderPhotoSubmissions(pendingPhotos)
                 ) : (
