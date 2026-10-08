@@ -11,7 +11,12 @@ import {
   getArchivedPhotos,
   updatePhotoStatus,
 } from './db.js'
-import { isCloudinaryConfigured, uploadBufferToCloudinary } from './cloudinary.js'
+import {
+  deleteFromCloudinary,
+  isCloudinaryConfigured,
+  logCloudinaryUploadDiagnostics,
+  uploadBufferToCloudinary,
+} from './cloudinary.js'
 
 dotenv.config()
 
@@ -139,8 +144,8 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
     })
   }
 
+  const uploadedFiles = []
   try {
-    const uploadedFiles = []
     for (const file of files) {
       const publicId = `matias-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       const uploadResult = await uploadBufferToCloudinary(
@@ -150,10 +155,26 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
       )
       uploadedFiles.push({
         image_url: uploadResult.secure_url,
-        cloudinary_public_id: uploadResult.public_id || publicId,
+        cloudinary_public_id: uploadResult.public_id,
       })
     }
+  } catch (error) {
+    console.error('Cloudinary upload failed', {
+      name: error?.name,
+      message: error?.message,
+      http_code: error?.http_code,
+      uploadedBeforeFailure: uploadedFiles.length,
+    })
+    if (error?.name === 'UnexpectedResponse') {
+      await logCloudinaryUploadDiagnostics()
+    }
+    await deleteFromCloudinary(uploadedFiles.map((file) => file.cloudinary_public_id))
+    return res.status(502).json({
+      message: 'El servicio de fotografías rechazó la subida. Intenta más tarde.',
+    })
+  }
 
+  try {
     const createdPhotos = await createPhotosFromUpload(
       uploadedFiles,
       guestName,
@@ -165,7 +186,8 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
       photos: createdPhotos,
     })
   } catch (error) {
-    console.error(error)
+    console.error('Saving uploaded photos failed', error)
+    await deleteFromCloudinary(uploadedFiles.map((file) => file.cloudinary_public_id))
     res.status(500).json({ message: 'No se pudieron guardar tus fotos.' })
   }
 })
