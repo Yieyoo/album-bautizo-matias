@@ -1,4 +1,6 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
+import { unlink } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
@@ -17,7 +19,7 @@ import {
   deletePhotoFromCloudinary,
   isCloudinaryConfigured,
   logCloudinaryUploadDiagnostics,
-  uploadBufferToCloudinary,
+  uploadFileToCloudinary,
 } from './cloudinary.js'
 
 dotenv.config()
@@ -43,15 +45,27 @@ const adminSessions = new Map()
 app.use(cors())
 app.use(express.json({ limit: '30mb' }))
 
+// En disco temporal y no en memoria: con muchos invitados subiendo a la vez,
+// la memoria del plan gratuito de Render (512 MB) se agotaría.
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({ destination: tmpdir() }),
   limits: {
     files: 20,
-    fileSize: 15 * 1024 * 1024,
+    // Límite de Cloudinary en el plan gratuito
+    fileSize: 10 * 1024 * 1024,
   },
 })
 
 const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp']
+
+function isUuid(value) {
+  return typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+}
+
+async function removeTemporaryFiles(files) {
+  await Promise.allSettled(files.map((file) => unlink(file.path)))
+}
 
 function isAdminAuthenticated(req) {
   const token = req.get('authorization')?.replace(/^Bearer\s+/i, '')
@@ -123,6 +137,7 @@ app.get('/api/photos', async (req, res) => {
 
 app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
   if (!isCloudinaryConfigured()) {
+    await removeTemporaryFiles(req.files ?? [])
     return res.status(503).json({
       message: 'El almacenamiento de fotografías no está configurado; no se guardó ningún archivo.',
     })
@@ -131,36 +146,37 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
   const files = req.files ?? []
   const guestName = req.body.guestName?.trim() ?? ''
   const message = req.body.message?.trim() ?? ''
+  // El cliente sube una foto por petición y manda sus propios identificadores:
+  // así las fotos de un envío quedan juntas y un reintento no crea duplicados.
+  const submissionId = isUuid(req.body.submissionId) ? req.body.submissionId : randomUUID()
+  const photoId = files.length === 1 && isUuid(req.body.photoId) ? req.body.photoId : undefined
 
   if (!files.length) {
     return res.status(400).json({ message: 'Debes seleccionar al menos una foto.' })
   }
 
-  const invalidFiles = files.filter(
-    (file) => !allowedMimeTypes.includes(file.mimetype) || file.size > 15 * 1024 * 1024
-  )
+  const invalidFiles = files.filter((file) => !allowedMimeTypes.includes(file.mimetype))
 
   if (invalidFiles.length > 0) {
+    await removeTemporaryFiles(files)
     return res.status(400).json({
-      message: 'Solo se permiten JPG, JPEG, PNG y WEBP de hasta 15 MB.',
+      message: 'Solo se permiten JPG, JPEG, PNG y WEBP de hasta 10 MB.',
     })
   }
 
   const uploadedFiles = []
   try {
     for (const file of files) {
-      const publicId = `matias-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-      const uploadResult = await uploadBufferToCloudinary(
-        file.buffer,
-        file.mimetype,
-        publicId
-      )
+      const id = photoId ?? randomUUID()
+      const uploadResult = await uploadFileToCloudinary(file.path, `matias-${id}`)
       uploadedFiles.push({
+        id,
         image_url: uploadResult.secure_url,
         cloudinary_public_id: uploadResult.public_id,
       })
     }
   } catch (error) {
+    await removeTemporaryFiles(files)
     console.error('Cloudinary upload failed', {
       name: error?.name,
       message: error?.message,
@@ -176,11 +192,14 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
     })
   }
 
+  await removeTemporaryFiles(files)
+
   try {
     const createdPhotos = await createPhotosFromUpload(
       uploadedFiles,
       guestName,
-      message
+      message,
+      submissionId
     )
 
     res.status(201).json({
@@ -299,6 +318,20 @@ app.delete('/api/photos/:id', async (req, res) => {
     console.error('Error deleting photo', error)
     res.status(500).json({ message: 'No se pudo eliminar la foto.' })
   }
+})
+
+// Multer rechaza archivos demasiado grandes antes de llegar a la ruta;
+// sin esto Express respondería con una página de error en HTML.
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    const tooLarge = error.code === 'LIMIT_FILE_SIZE'
+    return res.status(tooLarge ? 413 : 400).json({
+      message: tooLarge
+        ? 'La foto pesa más de 10 MB.'
+        : 'No se pudo recibir la foto.',
+    })
+  }
+  next(error)
 })
 
 app.listen(port, () => {

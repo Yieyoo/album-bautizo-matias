@@ -135,11 +135,10 @@ export async function getArchivedPhotos() {
   return memoryStore.photos.filter((photo) => photo.status === 'archived')
 }
 
-export async function createPhotosFromUpload(files, guestName, message) {
+export async function createPhotosFromUpload(files, guestName, message, submissionId = randomUUID()) {
   const db = ensureDatabaseConnection()
-  const submissionId = randomUUID()
   const records = files.map((file) => {
-    const id = randomUUID()
+    const id = file.id || randomUUID()
     return normalizePhoto({
       id,
       event_id: 'bautizo-matias',
@@ -159,7 +158,8 @@ export async function createPhotosFromUpload(files, guestName, message) {
     for (const record of records) {
       await db.query(
         `INSERT INTO photos (id, event_id, guest_name, message, image_url, cloudinary_public_id, submission_id, status, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (id) DO NOTHING`,
         [
           record.id,
           record.event_id,
@@ -174,7 +174,10 @@ export async function createPhotosFromUpload(files, guestName, message) {
       )
     }
   } else {
-    memoryStore.photos.unshift(...records)
+    const newRecords = records.filter(
+      (record) => !memoryStore.photos.some((photo) => photo.id === record.id)
+    )
+    memoryStore.photos.unshift(...newRecords)
   }
 
   return records

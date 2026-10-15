@@ -115,6 +115,8 @@ function App() {
   const preparedPhotoFiles = useRef(new Map())
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const submissionIdRef = useRef(null)
+  const photoIdsRef = useRef(new WeakMap())
   const [statusMessage, setStatusMessage] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
   const [adminToken, setAdminToken] = useState('')
@@ -163,24 +165,6 @@ function App() {
     window.addEventListener('keydown', handleLightboxKeyDown)
     return () => window.removeEventListener('keydown', handleLightboxKeyDown)
   }, [lightboxIndex, lightboxPhotos])
-
-  useEffect(() => {
-    if (!uploading) {
-      return undefined
-    }
-
-    const intervalId = window.setInterval(() => {
-      setUploadProgress((current) => {
-        if (current >= 92) {
-          return 92
-        }
-
-        return current + 12
-      })
-    }, 220)
-
-    return () => window.clearInterval(intervalId)
-  }, [uploading])
 
   async function loadPublishedPhotos() {
     if (isStaticDemo) {
@@ -256,44 +240,96 @@ function App() {
       return
     }
 
-    try {
-      setUploading(true)
-      setUploadProgress(5)
-      setStatusMessage('Preparando tus fotos...')
+    // Los identificadores se conservan entre reintentos: las fotos que falten
+    // se suman al mismo bloque y las que ya llegaron no se duplican.
+    submissionIdRef.current ??= crypto.randomUUID()
+    const total = selectedFiles.length
+    const failedFiles = []
+    let lastError = null
 
-      // Una a la vez para no agotar la memoria del celular con fotos grandes
-      const formData = new FormData()
-      for (const file of selectedFiles) {
-        formData.append('photos', await prepareImageForUpload(file))
-      }
-      formData.append('guestName', guestName)
-      formData.append('message', message)
+    setUploading(true)
+    setUploadProgress(0)
 
-      setUploadProgress(10)
-      setStatusMessage('Subiendo tus fotos...')
-
-      let data
-      const response = await fetch(`${apiUrl}/api/photos`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.message || 'No se pudieron guardar las fotos.')
+    // De una en una: si se corta la señal solo hay que repetir la foto afectada
+    for (const [index, file] of selectedFiles.entries()) {
+      setStatusMessage(`Subiendo foto ${index + 1} de ${total}...`)
+      if (!photoIdsRef.current.has(file)) {
+        photoIdsRef.current.set(file, crypto.randomUUID())
       }
 
-      setUploadProgress(100)
+      try {
+        await uploadPhotoWithRetry(await prepareImageForUpload(file), {
+          photoId: photoIdsRef.current.get(file),
+          submissionId: submissionIdRef.current,
+          guestName,
+          message,
+        })
+      } catch (error) {
+        console.error('Error uploading photo', error)
+        failedFiles.push(file)
+        lastError = error
+      }
+      setUploadProgress(Math.round(((index + 1) / total) * 100))
+    }
+
+    setUploading(false)
+
+    if (!failedFiles.length) {
+      submissionIdRef.current = null
       setSelectedFiles([])
       setGuestName('')
       setMessage('')
       setView('confirm')
-      setUploading(false)
-      setStatusMessage(data.message || 'Tus fotos quedaron pendientes de revisión familiar.')
-    } catch (error) {
-      setStatusMessage(error.message)
-      setUploading(false)
+      setStatusMessage('Tus fotografías quedaron pendientes de revisión familiar.')
+      return
     }
+
+    setSelectedFiles(failedFiles)
+    const sentCount = total - failedFiles.length
+    setStatusMessage(
+      sentCount
+        ? `Se enviaron ${sentCount} de ${total} fotos. Las ${failedFiles.length} restantes no se pudieron subir; revisa tu conexión y toca "Compartir recuerdos" para reintentarlas.`
+        : lastError?.message || 'No se pudieron subir tus fotos. Revisa tu conexión e inténtalo de nuevo.'
+    )
+  }
+
+  async function uploadPhotoWithRetry(file, fields) {
+    const formData = new FormData()
+    formData.append('photos', file)
+    Object.entries(fields).forEach(([key, value]) => formData.append(key, value))
+
+    let lastError = null
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, attempt * 3000))
+      }
+
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), 120000)
+      try {
+        const response = await fetch(`${apiUrl}/api/photos`, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        })
+        if (response.ok) return
+
+        const data = await response.json().catch(() => ({}))
+        lastError = new Error(data.message || 'No se pudo subir la foto.')
+        // Un archivo inválido o demasiado grande fallará igual en cada intento
+        if ([400, 413].includes(response.status)) break
+      } catch (error) {
+        lastError = new Error(
+          error.name === 'AbortError'
+            ? 'La subida tardó demasiado. Revisa tu conexión.'
+            : 'Se perdió la conexión al subir la foto.'
+        )
+      } finally {
+        window.clearTimeout(timeoutId)
+      }
+    }
+
+    throw lastError
   }
 
   async function handleAdminLogin(event) {

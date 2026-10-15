@@ -93,21 +93,19 @@ export async function logCloudinaryUploadDiagnostics() {
   }
 }
 
-export async function uploadBufferToCloudinary(buffer, mimeType, publicId) {
+// Envía el archivo directamente desde disco para no cargarlo entero en memoria.
+// Con el mismo publicId, un reintento sobrescribe la imagen en vez de duplicarla.
+export async function uploadFileToCloudinary(filePath, publicId) {
   if (!isCloudinaryConfigured()) {
     throw new Error('Cloudinary no está configurado; no se guardó ninguna fotografía.')
   }
 
-  const result = await cloudinary.uploader.upload(
-    `data:${mimeType};base64,${buffer.toString('base64')}`,
-    {
-      public_id: publicId,
-      folder: UPLOAD_FOLDER,
-      resource_type: 'image',
-    }
-  )
-
-  return result
+  return cloudinary.uploader.upload(filePath, {
+    public_id: publicId,
+    folder: UPLOAD_FOLDER,
+    resource_type: 'image',
+    overwrite: true,
+  })
 }
 
 export async function deleteFromCloudinary(publicIds) {
