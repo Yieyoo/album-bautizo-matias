@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto'
 import { unlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import cors from 'cors'
@@ -40,7 +40,6 @@ if (process.env.NODE_ENV === 'production') {
 
 const app = express()
 const port = process.env.PORT || 4000
-const adminSessions = new Map()
 
 app.use(cors())
 app.use(express.json({ limit: '30mb' }))
@@ -67,14 +66,32 @@ async function removeTemporaryFiles(files) {
   await Promise.allSettled(files.map((file) => unlink(file.path)))
 }
 
+const ADMIN_SESSION_MS = 8 * 60 * 60 * 1000
+
+// Sesiones firmadas en vez de guardadas en memoria: siguen siendo válidas
+// aunque Render reinicie o duerma el servidor. Cambiar ADMIN_PASSWORD las invalida.
+function signAdminSession(expiresAt) {
+  return createHmac('sha256', `admin-session:${process.env.ADMIN_PASSWORD}`)
+    .update(String(expiresAt))
+    .digest('hex')
+}
+
+function createAdminToken() {
+  const expiresAt = Date.now() + ADMIN_SESSION_MS
+  return `${expiresAt}.${signAdminSession(expiresAt)}`
+}
+
 function isAdminAuthenticated(req) {
-  const token = req.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expiresAt = token ? adminSessions.get(token) : undefined
-  if (!expiresAt || expiresAt <= Date.now()) {
-    if (token) adminSessions.delete(token)
-    return false
-  }
-  return true
+  if (!process.env.ADMIN_PASSWORD) return false
+
+  const token = req.get('authorization')?.replace(/^Bearer\s+/i, '') ?? ''
+  const [expiresAtText, signature = ''] = token.split('.')
+  const expiresAt = Number(expiresAtText)
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return false
+
+  const expected = Buffer.from(signAdminSession(expiresAt))
+  const received = Buffer.from(signature)
+  return received.length === expected.length && timingSafeEqual(received, expected)
 }
 
 app.post('/api/admin/login', (req, res) => {
@@ -93,9 +110,7 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(401).json({ message: 'Contraseña incorrecta. Intenta de nuevo.' })
   }
 
-  const token = randomBytes(32).toString('hex')
-  adminSessions.set(token, Date.now() + 8 * 60 * 60 * 1000)
-  res.json({ token })
+  res.json({ token: createAdminToken() })
 })
 
 app.get('/api/event', (req, res) => {

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import QRCode from 'react-qr-code'
 import './App.css'
 import { prepareImageForUpload } from './prepareImage.js'
@@ -79,6 +79,42 @@ const demoPublishedPhotos = [
   },
 ]
 
+const adminTokenStorageKey = 'album-matias-admin-token'
+
+// La sesión se conserva al recargar la página mientras no caduque
+function readStoredAdminToken() {
+  try {
+    const token = window.sessionStorage.getItem(adminTokenStorageKey) ?? ''
+    return Number(token.split('.')[0]) > Date.now() ? token : ''
+  } catch {
+    return ''
+  }
+}
+
+function storeAdminToken(token) {
+  try {
+    if (token) window.sessionStorage.setItem(adminTokenStorageKey, token)
+    else window.sessionStorage.removeItem(adminTokenStorageKey)
+  } catch {
+    // Sin almacenamiento (modo privado) la sesión dura hasta recargar
+  }
+}
+
+// Cloudinary genera versiones reducidas al vuelo; el original queda intacto
+// para guardarlo. Otras URLs (fotos de demostración) se usan tal cual.
+function cloudinaryImageUrl(url, width) {
+  if (!url?.includes('res.cloudinary.com/') || !url.includes('/image/upload/')) return url
+  return url.replace('/image/upload/', `/image/upload/c_limit,w_${width},q_auto,f_auto/`)
+}
+
+function thumbnailUrl(url) {
+  return cloudinaryImageUrl(url, 600)
+}
+
+function displayUrl(url) {
+  return cloudinaryImageUrl(url, 1600)
+}
+
 function groupPhotosBySubmission(photos) {
   const groups = new Map()
 
@@ -119,8 +155,8 @@ function App() {
   const photoIdsRef = useRef(new WeakMap())
   const [statusMessage, setStatusMessage] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
-  const [adminToken, setAdminToken] = useState('')
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false)
+  const [adminToken, setAdminToken] = useState(readStoredAdminToken)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => Boolean(readStoredAdminToken()))
   const [adminError, setAdminError] = useState('')
   const [adminNotice, setAdminNotice] = useState('')
   const [selectedPhotoIds, setSelectedPhotoIds] = useState([])
@@ -153,6 +189,30 @@ function App() {
     }
   }, [view, isAdminAuthenticated, adminToken])
 
+  // Las vistas previas se crean una vez por selección; antes se regeneraban
+  // con cada letra escrita en el nombre o el mensaje.
+  const previewUrls = useMemo(
+    () => selectedFiles.map((file) => URL.createObjectURL(file)),
+    [selectedFiles]
+  )
+  useEffect(
+    () => () => previewUrls.forEach((url) => URL.revokeObjectURL(url)),
+    [previewUrls]
+  )
+
+  useEffect(() => {
+    if (!uploading) return undefined
+
+    // Avisa antes de cerrar o recargar la página a mitad de una subida
+    function warnBeforeLeaving(event) {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', warnBeforeLeaving)
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving)
+  }, [uploading])
+
   useEffect(() => {
     if (lightboxIndex === null) return undefined
 
@@ -184,15 +244,38 @@ function App() {
     }
   }
 
+  function endAdminSession(message) {
+    storeAdminToken('')
+    setAdminToken('')
+    setIsAdminAuthenticated(false)
+    setAdminNotice('')
+    setSelectedPhotoIds([])
+    closeLightbox()
+    setAdminError(message)
+  }
+
+  // Si el servidor ya no acepta la sesión, se vuelve a pedir la contraseña
+  // en lugar de dejar el panel mostrando errores.
+  async function adminFetch(path, options = {}) {
+    const response = await fetch(`${apiUrl}${path}`, {
+      ...options,
+      headers: { ...options.headers, Authorization: `Bearer ${adminToken}` },
+    })
+    if (response.status === 401) {
+      const message = 'Tu sesión expiró. Vuelve a iniciar sesión.'
+      endAdminSession(message)
+      throw new Error(message)
+    }
+    return response
+  }
+
   async function loadPendingPhotos() {
     if (isStaticDemo) {
       return
     }
 
     try {
-      const response = await fetch(`${apiUrl}/api/photos?status=pending`, {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      })
+      const response = await adminFetch('/api/photos?status=pending')
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.message || 'No se pudieron cargar las fotos pendientes.')
@@ -206,6 +289,11 @@ function App() {
 
   function handlePhotoPick(event) {
     const files = Array.from(event.target.files ?? [])
+    // Permite volver a elegir los mismos archivos después de un aviso
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+
     const validFiles = files.filter(
       (file) => validImageTypes.includes(file.type) && file.size <= 60 * 1024 * 1024
     )
@@ -216,13 +304,21 @@ function App() {
     }
 
     const limitedFiles = validFiles.slice(0, 20)
-    setSelectedFiles(limitedFiles)
-    setStatusMessage('')
-    setView('upload')
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+    const skippedFormatCount = files.length - validFiles.length
+    const skippedLimitCount = validFiles.length - limitedFiles.length
+    const notices = []
+    if (skippedFormatCount) {
+      notices.push(
+        `${skippedFormatCount} ${skippedFormatCount === 1 ? 'archivo no se agregó porque no es' : 'archivos no se agregaron porque no son'} JPG, PNG o WEBP.`
+      )
     }
+    if (skippedLimitCount) {
+      notices.push(`Puedes enviar hasta 20 fotos a la vez; envía las ${skippedLimitCount} restantes después.`)
+    }
+
+    setSelectedFiles(limitedFiles)
+    setStatusMessage(notices.join(' '))
+    setView('upload')
   }
 
   function handleRemoveSelected(indexToRemove) {
@@ -360,6 +456,7 @@ function App() {
         throw new Error(data.message || 'No se pudo iniciar sesión.')
       }
       setAdminToken(data.token)
+      storeAdminToken(data.token)
 
       setIsAdminAuthenticated(true)
       setAdminPassword('')
@@ -390,17 +487,18 @@ function App() {
       return true
     }
 
-    const response = await fetch(`${apiUrl}/api/photos/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminToken}`,
-      },
-      body: JSON.stringify({ status }),
-    })
-    if (!response.ok) {
-      const data = await response.json()
-      setAdminError(data.message || 'No se pudo actualizar la fotografía.')
+    try {
+      const response = await adminFetch(`/api/photos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.message || 'No se pudo actualizar la fotografía.')
+      }
+    } catch (error) {
+      setAdminError(error.message || 'No se pudo actualizar la fotografía.')
       return false
     }
 
@@ -466,9 +564,8 @@ function App() {
         setPublishedPhotos((current) => current.filter((photo) => photo.id !== id))
         setArchivedPhotos((current) => current.filter((photo) => photo.id !== id))
       } else {
-        const response = await fetch(`${apiUrl}/api/photos/${encodeURIComponent(id)}`, {
+        const response = await adminFetch(`/api/photos/${encodeURIComponent(id)}`, {
           method: 'DELETE',
-          headers: { Authorization: 'Bearer ' + adminToken },
         })
         const data = await response.json()
         if (!response.ok) {
@@ -514,9 +611,7 @@ function App() {
     if (isStaticDemo) return
 
     try {
-      const response = await fetch(`${apiUrl}/api/photos?status=archived`, {
-        headers: { Authorization: 'Bearer ' + adminToken },
-      })
+      const response = await adminFetch('/api/photos?status=archived')
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.message || 'No se pudieron cargar las fotos archivadas.')
@@ -584,7 +679,7 @@ function App() {
                 onClick={() => openLightbox(index, submission.photos, true)}
                 aria-label={`Ampliar foto ${index + 1} de ${submission.guest_name || 'invitado'}`}
               >
-                <img src={photo.image_url} alt="" />
+                <img src={thumbnailUrl(photo.image_url)} alt="" loading="lazy" decoding="async" />
               </button>
               <div className="admin-submission-actions">
                 {isPublished ? (
@@ -668,12 +763,9 @@ function App() {
     const cachedFile = preparedPhotoFiles.current.get(photo.id)
     if (cachedFile) return cachedFile
 
-    const response = await fetch(
-      isStaticDemo
-        ? photo.image_url
-        : `${apiUrl}/api/photos/${encodeURIComponent(photo.id)}/download`,
-      isStaticDemo ? undefined : { headers: { Authorization: `Bearer ${adminToken}` } }
-    )
+    const response = isStaticDemo
+      ? await fetch(photo.image_url)
+      : await adminFetch(`/api/photos/${encodeURIComponent(photo.id)}/download`)
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))
       throw new Error(data.message || 'No se pudo descargar la foto.')
@@ -869,7 +961,12 @@ function App() {
                       onClick={() => openLightbox(index)}
                       aria-label="Abrir foto en pantalla completa"
                     >
-                      <img src={photo.image_url} alt={photo.message || 'Foto del bautizo'} />
+                      <img
+                        src={thumbnailUrl(photo.image_url)}
+                        alt={photo.message || 'Foto del bautizo'}
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </button>
                   ))}
                 </div>
@@ -938,15 +1035,9 @@ function App() {
               {selectedFiles.length > 0 && (
                 <div className="selected-grid">
                   {selectedFiles.map((file, index) => {
-                    const previewUrl = URL.createObjectURL(file)
-
                     return (
                       <div className="selected-photo" key={`${file.name}-${index}`}>
-                        <img
-                          src={previewUrl}
-                          alt={file.name}
-                          onLoad={() => URL.revokeObjectURL(previewUrl)}
-                        />
+                        <img src={previewUrls[index]} alt={file.name} decoding="async" />
                         <button
                           type="button"
                           className="remove-photo"
@@ -1112,7 +1203,7 @@ function App() {
               </button>
             )}
 
-            <img src={lightboxPhotos[lightboxIndex].image_url} alt="Foto ampliada" />
+            <img src={displayUrl(lightboxPhotos[lightboxIndex].image_url)} alt="Foto ampliada" />
 
             {lightboxPhotos.length > 1 && (
               <button
