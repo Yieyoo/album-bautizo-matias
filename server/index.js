@@ -41,6 +41,9 @@ if (process.env.NODE_ENV === 'production') {
 const app = express()
 const port = process.env.PORT || 4000
 
+// Render pasa las peticiones por un proxy; sin esto todas parecerían venir de la misma IP
+app.set('trust proxy', 1)
+
 app.use(cors())
 app.use(express.json({ limit: '30mb' }))
 
@@ -94,10 +97,44 @@ function isAdminAuthenticated(req) {
   return received.length === expected.length && timingSafeEqual(received, expected)
 }
 
+const LOGIN_MAX_FAILURES = 5
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000
+const failedLogins = new Map()
+
+// Solo cuentan los intentos fallidos, para frenar a quien adivine contraseñas
+// sin afectar a la familia cuando entra bien.
+function getLoginLockRemainingMs(ip) {
+  const entry = failedLogins.get(ip)
+  if (!entry) return 0
+  if (entry.resetAt <= Date.now()) {
+    failedLogins.delete(ip)
+    return 0
+  }
+  return entry.count >= LOGIN_MAX_FAILURES ? entry.resetAt - Date.now() : 0
+}
+
+function recordFailedLogin(ip) {
+  const now = Date.now()
+  const entry = failedLogins.get(ip)
+  if (!entry || entry.resetAt <= now) {
+    failedLogins.set(ip, { count: 1, resetAt: now + LOGIN_LOCKOUT_MS })
+  } else {
+    entry.count += 1
+  }
+}
+
 app.post('/api/admin/login', (req, res) => {
   const configuredPassword = process.env.ADMIN_PASSWORD
   if (!configuredPassword) {
     return res.status(503).json({ message: 'El acceso familiar no está configurado.' })
+  }
+
+  const lockRemainingMs = getLoginLockRemainingMs(req.ip)
+  if (lockRemainingMs) {
+    const minutes = Math.ceil(lockRemainingMs / 60000)
+    return res.status(429).json({
+      message: `Demasiados intentos. Espera ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'} e intenta de nuevo.`,
+    })
   }
 
   const submittedPassword = Buffer.from(String(req.body.password ?? ''))
@@ -107,9 +144,11 @@ app.post('/api/admin/login', (req, res) => {
     timingSafeEqual(submittedPassword, expectedPassword)
 
   if (!matches) {
+    recordFailedLogin(req.ip)
     return res.status(401).json({ message: 'Contraseña incorrecta. Intenta de nuevo.' })
   }
 
+  failedLogins.delete(req.ip)
   res.json({ token: createAdminToken() })
 })
 
