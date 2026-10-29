@@ -262,7 +262,14 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
     })
   } catch (error) {
     console.error('Saving uploaded photos failed', error)
-    await deleteFromCloudinary(uploadedFiles.map((file) => file.cloudinary_public_id))
+    // Un reintento sobrescribe el archivo que un intento anterior pudo dejar
+    // ya guardado en el álbum; solo se borra lo que seguro no quedó registrado.
+    const unsavedFiles = []
+    for (const file of uploadedFiles) {
+      const savedPhoto = await getPhotoById(file.id).catch(() => true)
+      if (!savedPhoto) unsavedFiles.push(file)
+    }
+    await deleteFromCloudinary(unsavedFiles.map((file) => file.cloudinary_public_id))
     res.status(500).json({ message: 'No se pudieron guardar tus fotos.' })
   }
 })

@@ -117,6 +117,22 @@ function displayUrl(url) {
   return cloudinaryImageUrl(url, 1600)
 }
 
+// Si el archivo ya no existe en Cloudinary, muestra un recuadro en lugar del
+// ícono de imagen rota.
+function PhotoImage({ src, alt, ...props }) {
+  const [failedSrc, setFailedSrc] = useState(null)
+
+  if (failedSrc === src) {
+    return (
+      <span className="photo-missing" role="img" aria-label={alt || 'Foto no disponible'}>
+        Foto no disponible
+      </span>
+    )
+  }
+
+  return <img src={src} alt={alt} onError={() => setFailedSrc(src)} {...props} />
+}
+
 function groupPhotosBySubmission(photos) {
   const groups = new Map()
 
@@ -681,7 +697,7 @@ function App() {
                 onClick={() => openLightbox(index, submission.photos, true)}
                 aria-label={`Ampliar foto ${index + 1} de ${submission.guest_name || 'invitado'}`}
               >
-                <img src={thumbnailUrl(photo.image_url)} alt="" loading="lazy" decoding="async" />
+                <PhotoImage src={thumbnailUrl(photo.image_url)} alt="" loading="lazy" decoding="async" />
               </button>
               <div className="admin-submission-actions">
                 {isPublished ? (
@@ -963,7 +979,7 @@ function App() {
                       onClick={() => openLightbox(index)}
                       aria-label="Abrir foto en pantalla completa"
                     >
-                      <img
+                      <PhotoImage
                         src={thumbnailUrl(photo.image_url)}
                         alt={photo.message || 'Foto del bautizo'}
                         loading="lazy"
@@ -1205,7 +1221,7 @@ function App() {
               </button>
             )}
 
-            <img src={displayUrl(lightboxPhotos[lightboxIndex].image_url)} alt="Foto ampliada" />
+            <PhotoImage src={displayUrl(lightboxPhotos[lightboxIndex].image_url)} alt="Foto ampliada" />
 
             {lightboxPhotos.length > 1 && (
               <button
