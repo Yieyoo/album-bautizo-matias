@@ -159,7 +159,7 @@ app.get('/api/event', (req, res) => {
       name: 'Matías',
       type: 'Bautizo',
       date: '7 de noviembre',
-      qrLink: 'https://yieyoo.github.io/album-bautizo-matias/',
+      qrLink: 'https://bautizomatias2026.com/',
       adminPath: '/admin',
     },
   })

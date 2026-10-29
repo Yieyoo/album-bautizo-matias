@@ -2,7 +2,7 @@
 
 Álbum familiar creado con React y Vite. La versión publicada como demo está en:
 
-<https://yieyoo.github.io/album-bautizo-matias/>
+<https://bautizomatias2026.com/>
 
 ## Publicación en GitHub Pages
 
@@ -15,7 +15,7 @@ El formulario conserva los campos **Nombre (opcional)** y **Mensaje (opcional)**
 
 GitHub Pages es estático: su demo no puede almacenar ni compartir las cargas entre invitados o dispositivos. Sin servidor conectado, el álbum muestra un aviso de que las fotografías están en revisión y no simula que los envíos llegaron a la familia. El acceso familiar ofrece un panel de demostración con contraseña `matias2026` y fotografías de ejemplo; no es una autenticación segura y sus acciones no se guardan ni afectan el álbum público. No reutilices esa contraseña para un panel real.
 
-Para abrir la vista previa del acceso familiar directamente, visita <https://yieyoo.github.io/album-bautizo-matias/?admin>.
+Para abrir la vista previa del acceso familiar directamente, visita <https://bautizomatias2026.com/?admin>.
 
 ### Activar el flujo compartido
 
