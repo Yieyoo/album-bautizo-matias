@@ -7,7 +7,9 @@ const validImageTypes = ['image/jpeg', 'image/png', 'image/webp']
 const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 const isStaticDemo = import.meta.env.PROD && !apiUrl
 const demoAdminPassword = 'matias2026'
-const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}`
+const shareUrl = import.meta.env.PROD
+  ? 'https://bautizomatias2026.com/'
+  : `${window.location.origin}${import.meta.env.BASE_URL}`
 
 const demoPendingPhotos = [
   {
