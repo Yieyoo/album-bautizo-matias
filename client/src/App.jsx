@@ -181,7 +181,7 @@ function AlbumIntro({ onDone }) {
           <path pathLength="1" className="outer" d="M150 -6 A156 156 0 0 0 -6 150 V466 H150" />
         </svg>
         <div className="intro-portrait">
-          <img src={`${import.meta.env.BASE_URL}matias/matias-01.jpg`} alt="" />
+          <img src={`${import.meta.env.BASE_URL}matias/matias-01-sm.jpg`} alt="" />
         </div>
         <p className="album-cover-eyebrow">Mi bautizo</p>
         <p className="album-cover-name">
@@ -1075,7 +1075,7 @@ function App() {
               </div>
               <div className="hero-copy">
                 <div className="hero-portrait">
-                  <img src={`${import.meta.env.BASE_URL}matias/matias-01.jpg`} alt="Matías" />
+                  <img src={`${import.meta.env.BASE_URL}matias/matias-01-sm.jpg`} alt="Matías" />
                 </div>
                 <p className="eyebrow">Mi bautizo</p>
                 <h1>MATÍAS</h1>
@@ -1133,11 +1133,12 @@ function App() {
                           onClick={() => openLightbox(index, familyPhotos, false)}
                           aria-label="Abrir foto en pantalla completa"
                         >
+                          {/* Sin carga diferida: son pocas y ligeras, y Safari a veces no
+                              cargaba las que van inclinadas hasta mover la pantalla */}
                           <PhotoImage
-                            src={photo.image_url}
+                            src={photo.thumb_url}
                             alt={photo.caption || 'Matías'}
                             style={{ aspectRatio: `1 / ${photo.ratio}` }}
-                            loading="lazy"
                             decoding="async"
                           />
                           {photo.caption && <span className="photo-caption">{photo.caption}</span>}

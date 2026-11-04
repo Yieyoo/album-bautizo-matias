@@ -18,7 +18,7 @@ export const familyPhotoFiles = [
   { file: 'matias-09.jpg', ratio: 4 / 3, caption: 'Recién llegado y ya robando corazones', tape: 'dorado' },
   { file: 'matias-02.jpg', ratio: 4 / 3, caption: 'Aquí, planeando mi próxima travesura', tape: 'azul' },
   { file: 'matias-05.jpg', ratio: 9 / 16, caption: 'Explorando el mundo, una cosa a la vez', tape: 'crema' },
-  { file: 'matias-08.jpg', ratio: 16 / 9, caption: '¿Y mi mesa? Ya traigo hambre', tape: 'azul' },
+  { file: 'matias-08.jpg', ratio: 16 / 9, caption: '¿Y mi comida? Ya traigo hambre', tape: 'azul' },
   { file: 'matias-10.jpg', ratio: 4 / 3, caption: 'Sheriff oficial de la casa 🤠', tape: 'dorado' },
   { file: 'matias-11.jpg', ratio: 4 / 3, caption: 'Copiloto feliz, siempre de buenas', tape: 'dorado' },
   { file: 'matias-04.jpg', ratio: 4 / 3, caption: 'Seleccionado nacional… de apapachos', tape: 'azul' },
@@ -31,6 +31,9 @@ export const familyPhotoFiles = [
 export const familyPhotos = familyPhotoFiles.map(({ file, ratio, caption, tape }, index) => ({
   id: `familia-${index + 1}`,
   image_url: `${import.meta.env.BASE_URL}matias/${file}`,
+  // Versión de 800 px para el collage: en iPhone, Safari deja en blanco fotos
+  // grandes cuando se le acaba la memoria; la completa se ve al abrirla.
+  thumb_url: `${import.meta.env.BASE_URL}matias/${file.replace('.jpg', '-sm.jpg')}`,
   ratio,
   caption,
   tape,
