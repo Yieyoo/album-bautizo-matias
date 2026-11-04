@@ -2,7 +2,7 @@
 // Los archivos viven en client/public/matias/ y se sirven junto con la página,
 // sin pasar por Cloudinary ni por la revisión del panel familiar.
 export const familyMessage = {
-  title: 'Para nuestro Matías',
+  title: 'Para Matías e invitados',
   text:
     'Desde que llegaste, nuestra vida se llenó de luz. Cada sonrisa tuya es un regalo que Dios nos da todos los días.\n\n' +
     'Hoy te presentamos ante Él rodeado de las personas que más te quieren, para que su amor te acompañe siempre en tu camino.\n\n' +
