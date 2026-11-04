@@ -183,29 +183,8 @@
   padding: 10px 0;
 }
 
-.qr-card {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(161, 180, 196, 0.45);
-  border-radius: 22px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  box-shadow: 0 10px 25px rgba(98, 118, 142, 0.06);
-}
 
-.qr-title {
-  margin: 0 0 4px;
-  font-weight: 800;
-  color: #1d2c3d;
-}
 
-.qr-subtitle {
-  margin: 0;
-  font-size: 0.76rem;
-  color: #677789;
-}
 
 .gallery-section {
   margin-top: 2px;
@@ -916,12 +895,23 @@
 
 .welcome-text {
   max-width: 440px;
-  margin: 0 auto 26px;
+  margin: 0 auto 14px;
   color: #71879a;
   font-size: clamp(1.08rem, 3.5vw, 1.45rem);
   line-height: 1.38;
   font-weight: 500;
 }
+
+.share-hint {
+  max-width: 320px;
+  margin: 0 auto 26px;
+  color: #8a9aa8;
+  font-size: 0.98rem;
+  line-height: 1.45;
+}
+
+
+
 
 .hero-cta {
   display: flex;
@@ -970,76 +960,13 @@
   font-weight: 400;
 }
 
-.qr-card {
-  position: relative;
-  display: grid;
-  grid-template-columns: 112px minmax(0, 1fr) 104px;
-  align-items: center;
-  gap: 20px;
-  min-height: 158px;
-  margin: 0 0 36px;
-  padding: 18px 22px;
-  border: 1px solid rgba(97, 109, 116, 0.15);
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: 0 8px 24px rgba(77, 83, 88, 0.035);
-}
 
-.qr-code {
-  display: grid;
-  width: 108px;
-  height: 108px;
-  place-items: center;
-}
 
-.qr-code svg {
-  width: 100%;
-  height: 100%;
-}
 
-.qr-copy {
-  min-width: 0;
-}
 
-.qr-title {
-  margin-bottom: 6px;
-  color: #2e4355;
-  font-size: 1.18rem;
-  font-weight: 800;
-}
 
-.qr-subtitle {
-  max-width: 290px;
-  color: #79838c;
-  font-size: 1rem;
-  line-height: 1.4;
-}
 
-.qr-share {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  background: transparent;
-  color: #43596a;
-  font-size: 0.8rem;
-  line-height: 1.25;
-  cursor: pointer;
-}
 
-.qr-share svg {
-  width: 58px;
-  height: 58px;
-  padding: 15px;
-  border-radius: 50%;
-  background: #f1f2f5;
-  fill: none;
-  stroke: #61809a;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
 
 .gallery-section {
   margin: 0;
@@ -1083,7 +1010,7 @@
 
 .site-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 4px 0 2px;
 }
 
@@ -1210,38 +1137,11 @@
     font-size: 1.7rem;
   }
 
-  .qr-card {
-    grid-template-columns: 78px minmax(0, 1fr) 62px;
-    gap: 11px;
-    min-height: 128px;
-    margin-bottom: 30px;
-    padding: 12px;
-    border-radius: 24px;
-  }
 
-  .qr-code {
-    width: 76px;
-    height: 76px;
-  }
 
-  .qr-title {
-    font-size: 0.94rem;
-  }
 
-  .qr-subtitle {
-    margin-bottom: 0;
-    font-size: 0.78rem;
-  }
 
-  .qr-share {
-    font-size: 0.68rem;
-  }
 
-  .qr-share svg {
-    width: 46px;
-    height: 46px;
-    padding: 12px;
-  }
 
   .gallery-heading {
     column-gap: 12px;
@@ -1298,7 +1198,7 @@
   }
 
   .welcome-text {
-    margin-bottom: 18px;
+    margin-bottom: 12px;
     font-size: 1.12rem;
   }
 
@@ -1315,11 +1215,91 @@
   }
 }
 
+/* Animaciones de entrada: suaves y una sola vez, para que la portada no se sienta plana */
+@keyframes hero-photo-settle {
+  from {
+    transform: scale(1.08);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes button-shine {
+  0%,
+  70% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(260%) skewX(-20deg);
+  }
+}
+
+@keyframes photo-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.home-screen .hero-panel::before {
+  animation: hero-photo-settle 2.4s ease-out both;
+}
+
+.home-screen .hero-copy > * {
+  animation: rise-in 0.7s ease-out both;
+}
+
+.home-screen .hero-copy > :nth-child(2) { animation-delay: 0.12s; }
+.home-screen .hero-copy > :nth-child(3) { animation-delay: 0.24s; }
+.home-screen .hero-copy > :nth-child(4) { animation-delay: 0.36s; }
+.home-screen .hero-copy > :nth-child(5) { animation-delay: 0.5s; }
+.home-screen .hero-copy > :nth-child(6) { animation-delay: 0.62s; }
+.home-screen .hero-copy > :nth-child(n + 7) { animation-delay: 0.74s; }
+
+/* Un brillo que cruza el botón de vez en cuando para invitar a tocarlo */
+.hero-cta {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-cta::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  animation: button-shine 4.5s ease-in-out 1.6s infinite;
+  pointer-events: none;
+}
+
+.photo-card {
+  animation: photo-fade-in 0.6s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .phone-frame *,
   .phone-frame *::before,
   .phone-frame *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    animation: none !important;
   }
 }

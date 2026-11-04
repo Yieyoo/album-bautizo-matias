@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import QRCode from 'react-qr-code'
 import './App.css'
 import { prepareImageForUpload } from './prepareImage.js'
 
@@ -904,7 +903,9 @@ function App() {
   }
 
   function copyEventLink() {
-    navigator.clipboard?.writeText(shareUrl).catch((error) => {
+    navigator.clipboard?.writeText(shareUrl).then(() => {
+      setStatusMessage('Enlace copiado. Pégalo en WhatsApp para compartir el álbum.')
+    }).catch((error) => {
       console.error('No se pudo copiar el enlace del evento', error)
       setStatusMessage('No se pudo copiar el enlace. Puedes copiarlo desde la barra del navegador.')
     })
@@ -925,6 +926,9 @@ function App() {
                   Gracias por acompañarnos
                   <span>en este día tan especial.</span>
                 </p>
+                <p className="share-hint">
+                  Comparte las fotos que tomes hoy y ayúdanos a guardar los recuerdos de este día.
+                </p>
 
                 <button type="button" className="primary-button hero-cta" onClick={() => setView('upload')}>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -942,25 +946,6 @@ function App() {
                 )}
               </div>
             </section>
-
-            <div className="qr-card" id="event-info">
-              <div className="qr-code">
-                <QRCode id="event-qr" value={shareUrl} size={100} bgColor="#ffffff" fgColor="#263b4d" />
-              </div>
-              <div className="qr-copy">
-                <p className="qr-title">Código del evento</p>
-                <p className="qr-subtitle">Escanéalo desde tu móvil para compartir tus fotos</p>
-              </div>
-              <button type="button" className="qr-share" onClick={copyEventLink} aria-label="Copiar enlace del evento">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="18" cy="5" r="3" />
-                  <circle cx="6" cy="12" r="3" />
-                  <circle cx="18" cy="19" r="3" />
-                  <path d="m8.7 10.6 6.6-4.2M8.7 13.4l6.6 4.2" />
-                </svg>
-                <span>Compartir<br />enlace</span>
-              </button>
-            </div>
 
             {!isStaticDemo && publishedPhotos.length > 0 ? (
               <section className="gallery-section" id="gallery">
@@ -1004,6 +989,9 @@ function App() {
             </div>
 
             <footer className="site-footer">
+              <button type="button" className="family-access" onClick={copyEventLink}>
+                Copiar enlace del álbum
+              </button>
               <button
                 type="button"
                 className="family-access"
