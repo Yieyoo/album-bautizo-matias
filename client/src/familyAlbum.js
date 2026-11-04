@@ -5,7 +5,7 @@ export const familyMessage = {
   title: 'Para Matías e invitados',
   text:
     'Desde que llegaste, nuestra vida se llenó de luz. Cada sonrisa tuya es un regalo que Dios nos da todos los días.\n\n' +
-    'Hoy te presentamos ante Él rodeado de las personas que más te quieren, para que su amor te acompañe siempre en tu camino.\n\n' +
+    'Hoy te presentamos ante Dios rodeado de las personas que más te quieren, para que su amor te acompañe siempre en tu camino.\n\n' +
     'Gracias a todos por estar aquí y por guardar con nosotros los recuerdos de este día tan especial.',
   signature: 'De Matías para el mundo',
 }
