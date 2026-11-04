@@ -11,27 +11,29 @@ export const familyMessage = {
 }
 
 // Orden en que se reparten en el collage; `ratio` es alto entre ancho y
-// `caption` la frase que va escrita debajo de cada foto
+// `caption` la frase que va escrita debajo de cada foto. `tape` es el color de la
+// cinta, elegido a mano para que no se repita con la foto de arriba ni la de al lado
 export const familyPhotoFiles = [
-  { file: 'matias-01.jpg', ratio: 4 / 3, caption: 'Listo para mi gran día 😎' },
-  { file: 'matias-09.jpg', ratio: 4 / 3, caption: 'Recién llegado y ya robando corazones' },
-  { file: 'matias-02.jpg', ratio: 4 / 3, caption: 'Aquí, planeando mi próxima travesura' },
-  { file: 'matias-05.jpg', ratio: 9 / 16, caption: 'Explorando el mundo, una cosa a la vez' },
-  { file: 'matias-08.jpg', ratio: 16 / 9, caption: '¿Y mi mesa? Ya traigo hambre' },
-  { file: 'matias-10.jpg', ratio: 4 / 3, caption: 'Sheriff oficial de la casa 🤠' },
-  { file: 'matias-11.jpg', ratio: 4 / 3, caption: 'Copiloto feliz, siempre de buenas' },
-  { file: 'matias-04.jpg', ratio: 4 / 3, caption: 'Seleccionado nacional… de apapachos' },
-  { file: 'matias-12.jpg', ratio: 16 / 9, caption: 'Paseando con estilo, como todo un galán' },
-  { file: 'matias-07.jpg', ratio: 4 / 3, caption: 'Las cámaras me aman 📸' },
-  { file: 'matias-03.jpg', ratio: 4 / 3, caption: 'De compras en el mercado: yo escojo la fruta' },
-  { file: 'matias-06.jpg', ratio: 4 / 3, caption: 'Primero me peino, luego conquisto' },
+  { file: 'matias-01.jpg', ratio: 4 / 3, caption: 'Listo para mi gran día 😎', tape: 'crema' },
+  { file: 'matias-09.jpg', ratio: 4 / 3, caption: 'Recién llegado y ya robando corazones', tape: 'dorado' },
+  { file: 'matias-02.jpg', ratio: 4 / 3, caption: 'Aquí, planeando mi próxima travesura', tape: 'azul' },
+  { file: 'matias-05.jpg', ratio: 9 / 16, caption: 'Explorando el mundo, una cosa a la vez', tape: 'crema' },
+  { file: 'matias-08.jpg', ratio: 16 / 9, caption: '¿Y mi mesa? Ya traigo hambre', tape: 'azul' },
+  { file: 'matias-10.jpg', ratio: 4 / 3, caption: 'Sheriff oficial de la casa 🤠', tape: 'dorado' },
+  { file: 'matias-11.jpg', ratio: 4 / 3, caption: 'Copiloto feliz, siempre de buenas', tape: 'dorado' },
+  { file: 'matias-04.jpg', ratio: 4 / 3, caption: 'Seleccionado nacional… de apapachos', tape: 'azul' },
+  { file: 'matias-12.jpg', ratio: 16 / 9, caption: 'Paseando con estilo, como todo un galán', tape: 'azul' },
+  { file: 'matias-07.jpg', ratio: 4 / 3, caption: 'Las cámaras me aman 📸', tape: 'crema' },
+  { file: 'matias-03.jpg', ratio: 4 / 3, caption: 'De compras en el mercado: yo escojo la fruta', tape: 'dorado' },
+  { file: 'matias-06.jpg', ratio: 4 / 3, caption: 'Primero me peino, luego conquisto', tape: 'crema' },
 ]
 
-export const familyPhotos = familyPhotoFiles.map(({ file, ratio, caption }, index) => ({
+export const familyPhotos = familyPhotoFiles.map(({ file, ratio, caption, tape }, index) => ({
   id: `familia-${index + 1}`,
   image_url: `${import.meta.env.BASE_URL}matias/${file}`,
   ratio,
   caption,
+  tape,
   guest_name: familyMessage.signature,
   message: caption,
 }))
@@ -47,4 +49,16 @@ export function splitIntoColumns(photos) {
     heights[target] += photo.ratio
   })
   return columns
+}
+
+// Para las fotos de los invitados: colores y ángulos en secuencias de distinto
+// largo, así la combinación tarda en repetirse y se ve puesta al azar
+const tapeColors = ['crema', 'azul', 'crema', 'dorado', 'azul', 'dorado', 'crema']
+const tapeAngles = [-4, 5, -2, 3, -6]
+
+export function tapeFor(position, color) {
+  return {
+    className: `tape-${color ?? tapeColors[position % tapeColors.length]}`,
+    style: { '--tape-rotate': `${tapeAngles[position % tapeAngles.length]}deg` },
+  }
 }

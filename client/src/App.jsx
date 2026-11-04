@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { prepareImageForUpload } from './prepareImage.js'
-import { familyMessage, familyPhotos, splitIntoColumns } from './familyAlbum.js'
+import { familyMessage, familyPhotos, splitIntoColumns, tapeFor } from './familyAlbum.js'
 
 const validImageTypes = ['image/jpeg', 'image/png', 'image/webp']
 const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
@@ -1101,11 +1101,14 @@ function App() {
                 <div className="family-columns">
                   {splitIntoColumns(familyPhotos).map((column, columnIndex) => (
                     <div className="family-column" key={columnIndex}>
-                      {column.map(({ photo, index }) => (
+                      {column.map(({ photo, index }) => {
+                        const tape = tapeFor(index, photo.tape)
+                        return (
                         <button
                           type="button"
                           key={photo.id}
-                          className="photo-card"
+                          className={`photo-card ${tape.className}`}
+                          style={tape.style}
                           onClick={() => openLightbox(index, familyPhotos, false)}
                           aria-label="Abrir foto en pantalla completa"
                         >
@@ -1118,7 +1121,8 @@ function App() {
                           />
                           {photo.caption && <span className="photo-caption">{photo.caption}</span>}
                         </button>
-                      ))}
+                        )
+                      })}
                     </div>
                   ))}
                 </div>
@@ -1141,12 +1145,15 @@ function App() {
                   {gallerySubmissions.map((submission) => {
                     const hasNote = (submission.message ?? '').trim() !== ''
                     return submission.photos.flatMap((photo, photoIndex) => {
+                      const position = galleryPhotos.indexOf(photo)
+                      const photoTape = tapeFor(position * 2)
                       const tiles = [
                         <button
                           type="button"
                           key={photo.id}
-                          className="photo-card"
-                          onClick={() => openLightbox(galleryPhotos.indexOf(photo), galleryPhotos)}
+                          className={`photo-card ${photoTape.className}`}
+                          style={photoTape.style}
+                          onClick={() => openLightbox(position, galleryPhotos)}
                           aria-label="Abrir foto en pantalla completa"
                         >
                           <PhotoImage
@@ -1160,7 +1167,11 @@ function App() {
                       // El mensaje del invitado va junto a su primera foto, como en un libro de firmas
                       if (hasNote && photoIndex === 0) {
                         tiles.push(
-                          <figure key={`${submission.id}-note`} className="guest-note">
+                          <figure
+                            key={`${submission.id}-note`}
+                            className={`guest-note ${tapeFor(position * 2 + 1).className}`}
+                            style={tapeFor(position * 2 + 1).style}
+                          >
                             <span className="guest-note-mark" aria-hidden="true">“</span>
                             <blockquote>{submission.message}</blockquote>
                             <figcaption>{submission.guest_name || 'Invitado'}</figcaption>

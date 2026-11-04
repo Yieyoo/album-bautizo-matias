@@ -1317,7 +1317,7 @@
   max-width: 76px;
   height: 22px;
   translate: -50% 0;
-  rotate: -4deg;
+  rotate: var(--tape-rotate, -4deg);
   background:
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0 2px, transparent 2px 7px),
     rgba(226, 205, 172, 0.72);
@@ -1329,18 +1329,16 @@
   pointer-events: none;
 }
 
-/* Se alternan el color y el ángulo para que no se vean todas iguales */
-.family-column .photo-card:nth-child(even)::before,
-.gallery-masonry > :nth-child(even)::before {
-  rotate: 5deg;
+/* Colores de cinta; el ángulo llega en --tape-rotate desde cada foto */
+.photo-card.tape-azul::before,
+.guest-note.tape-azul::before {
   background:
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.25) 0 2px, transparent 2px 7px),
     rgba(176, 198, 214, 0.7);
 }
 
-.family-column:nth-child(2) .photo-card:nth-child(odd)::before,
-.gallery-masonry > :nth-child(3n)::before {
-  rotate: 3deg;
+.photo-card.tape-dorado::before,
+.guest-note.tape-dorado::before {
   background:
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0 2px, transparent 2px 7px),
     rgba(214, 186, 140, 0.62);
