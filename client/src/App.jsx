@@ -126,14 +126,6 @@ const heroDots = [
   [15, 29, 4, 0.41], [17.9, 30.9, 4, 0.59], [92.3, 42.6, 4, 0.24], [7.5, 7, 4, 2.89],
 ]
 
-function GoldCross({ size, style }) {
-  return (
-    <svg className="gold-cross" width={size} height={size * 1.4} viewBox="0 0 10 14" style={style} aria-hidden="true">
-      <path d="M5 0.5v13M1 4.5h8" />
-    </svg>
-  )
-}
-
 const introSeenKey = 'album-matias-intro-visto'
 
 // El intro se muestra una vez por visita y nunca con "Reducir movimiento"
@@ -159,11 +151,13 @@ function AlbumIntro({ onDone }) {
     } catch {
       // Sin almacenamiento el intro podría repetirse al recargar; no pasa nada
     }
-    const timer = window.setTimeout(() => onDoneRef.current(), 3400)
+    const timer = window.setTimeout(() => onDoneRef.current(), 4700)
     return () => window.clearTimeout(timer)
   }, [])
 
-  // La tapa se dibuja dos veces, una por mitad, para abrirse como dos puertas
+  // La tapa se dibuja dos veces, una por mitad, para abrirse como dos puertas.
+  // Secuencia: cae una gota de agua, sus ondas se vuelven el arco, aparece
+  // Matías con su nombre letra por letra y al final se abren las puertas.
   const cover = (
     <>
       <div className="album-cover-stars">
@@ -175,6 +169,10 @@ function AlbumIntro({ onDone }) {
         ))}
       </div>
       <div className="album-cover-frame">
+        <span className="intro-drop" />
+        <span className="intro-ripple" />
+        <span className="intro-ripple" />
+        <span className="intro-ripple" />
         <svg className="album-cover-arch" viewBox="0 0 300 460" preserveAspectRatio="none">
           {/* Cada lado nace arriba al centro y baja, para trazarse a la vez */}
           <path pathLength="1" d="M150 8 A142 142 0 0 1 292 150 V452 H150" />
@@ -182,10 +180,19 @@ function AlbumIntro({ onDone }) {
           <path pathLength="1" className="outer" d="M150 -6 A156 156 0 0 1 306 150 V466 H150" />
           <path pathLength="1" className="outer" d="M150 -6 A156 156 0 0 0 -6 150 V466 H150" />
         </svg>
-        <GoldCross size={16} style={{ marginBottom: 18 }} />
+        <div className="intro-portrait">
+          <img src={`${import.meta.env.BASE_URL}matias/matias-01.jpg`} alt="" />
+        </div>
         <p className="album-cover-eyebrow">Mi bautizo</p>
-        <p className="album-cover-name">Matías</p>
+        <p className="album-cover-name">
+          {[...'Matías'].map((letter, index) => (
+            <span key={index} style={{ animationDelay: `${1.95 + index * 0.08}s` }}>
+              {letter}
+            </span>
+          ))}
+        </p>
         <p className="album-cover-date">7 de noviembre</p>
+        <p className="album-cover-subtitle">Álbum de recuerdos</p>
       </div>
     </>
   )
@@ -193,11 +200,25 @@ function AlbumIntro({ onDone }) {
   return (
     <div className="album-intro" onClick={onDone} aria-hidden="true">
       <div className="album-intro-light" />
+      <div className="album-intro-rays" />
       <div className="album-cover album-door-left">{cover}</div>
       <div className="album-cover album-door-right">{cover}</div>
+      <div className="intro-sparks">
+        {introSparks.map(([x, y, delay], index) => (
+          <span key={index} style={{ '--spark-x': `${x}px`, '--spark-y': `${y}px`, animationDelay: `${delay}s` }} />
+        ))}
+      </div>
+      <p className="intro-skip">Toca para entrar</p>
     </div>
   )
 }
+
+// Chispas doradas que salen del centro cuando se abren las puertas: destino y retraso
+const introSparks = Array.from({ length: 18 }, (_, index) => {
+  const angle = (index / 18) * Math.PI * 2 + (index % 2) * 0.17
+  const distance = 120 + ((index * 53) % 110)
+  return [Math.cos(angle) * distance, Math.sin(angle) * distance * 1.3, 3.15 + (index % 5) * 0.05]
+})
 
 function PhotoImage({ src, alt, ...props }) {
   const [failedSrc, setFailedSrc] = useState(null)
