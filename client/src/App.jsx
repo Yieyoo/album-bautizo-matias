@@ -116,6 +116,31 @@ function displayUrl(url) {
 
 // Si el archivo ya no existe en Cloudinary, muestra un recuadro en lugar del
 // ícono de imagen rota.
+// Hojas a lo largo del tallo: posición, ángulo y tamaño, de abajo hacia arriba
+const oliveLeaves = [
+  [92, 180, -150, 1], [84, 160, -20, 1.05], [74, 140, -160, 1.1], [66, 120, -35, 1.1],
+  [57, 100, -165, 1.05], [50, 80, -45, 1], [44, 60, -170, 0.95], [40, 40, -55, 0.9],
+  [37, 22, -175, 0.8],
+]
+
+// Rama de olivo a línea fina, como el ícono del álbum, que abraza el retrato
+function OliveBranch({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 120 200" aria-hidden="true">
+      <path className="olive-stem" d="M104 198 C 80 160, 52 110, 36 8" />
+      {oliveLeaves.map(([x, y, angle, scale], index) => (
+        <g key={index} transform={`translate(${x} ${y}) rotate(${angle}) scale(${scale})`}>
+          <path
+            className="olive-leaf"
+            style={{ animationDelay: `${0.5 + index * 0.08}s` }}
+            d="M0 0 C 7 -7, 19 -7, 26 0 C 19 7, 7 7, 0 0 Z"
+          />
+        </g>
+      ))}
+    </svg>
+  )
+}
+
 function PhotoImage({ src, alt, ...props }) {
   const [failedSrc, setFailedSrc] = useState(null)
 
@@ -960,6 +985,8 @@ function App() {
             <section className="hero-panel hero-arch">
               <div className="hero-copy">
                 <div className="hero-portrait">
+                  <OliveBranch className="olive-branch olive-left" />
+                  <OliveBranch className="olive-branch olive-right" />
                   <img src={`${import.meta.env.BASE_URL}matias/matias-01.jpg`} alt="Matías" />
                 </div>
                 <p className="eyebrow">Mi bautizo</p>
