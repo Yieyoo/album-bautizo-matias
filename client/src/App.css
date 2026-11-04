@@ -1247,7 +1247,7 @@
 
 .site-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 4px 0 2px;
 }
 

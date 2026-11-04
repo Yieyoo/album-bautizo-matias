@@ -6,9 +6,6 @@ const validImageTypes = ['image/jpeg', 'image/png', 'image/webp']
 const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 const isStaticDemo = import.meta.env.PROD && !apiUrl
 const demoAdminPassword = 'matias2026'
-const shareUrl = import.meta.env.PROD
-  ? 'https://bautizomatias2026.com/'
-  : `${window.location.origin}${import.meta.env.BASE_URL}`
 
 const demoPendingPhotos = [
   {
@@ -909,15 +906,6 @@ function App() {
     document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  function copyEventLink() {
-    navigator.clipboard?.writeText(shareUrl).then(() => {
-      setStatusMessage('Enlace copiado. Pégalo en WhatsApp para compartir el álbum.')
-    }).catch((error) => {
-      console.error('No se pudo copiar el enlace del evento', error)
-      setStatusMessage('No se pudo copiar el enlace. Puedes copiarlo desde la barra del navegador.')
-    })
-  }
-
   return (
     <div className="app-shell">
       <div className="phone-frame">
@@ -1016,9 +1004,6 @@ function App() {
             </div>
 
             <footer className="site-footer">
-              <button type="button" className="family-access" onClick={copyEventLink}>
-                Copiar enlace del álbum
-              </button>
               <button
                 type="button"
                 className="family-access"
