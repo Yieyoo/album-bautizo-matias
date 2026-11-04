@@ -986,7 +986,7 @@
   height: 310px;
   background:
     linear-gradient(180deg, rgba(255, 253, 250, 0.02) 0%, rgba(255, 253, 250, 0.05) 38%, #fffdfa 100%),
-    url('https://images.unsplash.com/photo-1566516171511-1c411a59c8ba?auto=format&fit=crop&w=1800&q=85') center 42% / cover;
+    url('/matias/matias-05.jpg') center 40% / cover;
   filter: none;
 }
 
@@ -1177,6 +1177,72 @@
   line-height: 1.55;
 }
 
+/* Comienzo del álbum: carta de los papás y sus fotos de Matías */
+.family-album {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.family-letter {
+  margin: 0;
+  padding: 26px 22px 22px;
+  border: 1px solid rgba(191, 164, 131, 0.4);
+  border-radius: 20px;
+  background: #fbf6ee;
+  color: #6f5b49;
+  text-align: center;
+  animation: photo-fade-in 0.6s ease-out both;
+}
+
+.family-letter h2 {
+  margin: 0 0 12px;
+  color: #4f6a82;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.family-letter blockquote {
+  margin: 0 0 14px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.25rem;
+  font-style: italic;
+  line-height: 1.4;
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+.family-letter figcaption {
+  color: #a48666;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.family-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+}
+
+.family-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.family-column .photo-card {
+  display: block;
+  width: 100%;
+  border-radius: 16px;
+  background: #eef1f3;
+  box-shadow: 0 6px 16px rgba(44, 50, 54, 0.1);
+}
+
 /* Collage de dos columnas: cada foto conserva su proporción original */
 .gallery-masonry {
   column-count: 2;
@@ -1192,7 +1258,7 @@
   display: block;
   width: 100%;
   aspect-ratio: auto;
-  min-height: 120px;
+  min-height: 60px;
   border-radius: 16px;
   background: #eef1f3;
   box-shadow: 0 6px 16px rgba(44, 50, 54, 0.1);

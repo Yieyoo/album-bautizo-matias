@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { prepareImageForUpload } from './prepareImage.js'
+import { familyMessage, familyPhotos, splitIntoColumns } from './familyAlbum.js'
 
 const validImageTypes = ['image/jpeg', 'image/png', 'image/webp']
 const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
@@ -129,6 +130,11 @@ function PhotoImage({ src, alt, ...props }) {
   return <img src={src} alt={alt} onError={() => setFailedSrc(src)} {...props} />
 }
 
+// Evita volver a dibujar la galería cuando una revisión trae exactamente lo mismo
+function keepIfUnchanged(current, next) {
+  return JSON.stringify(current) === JSON.stringify(next) ? current : next
+}
+
 function groupPhotosBySubmission(photos) {
   const groups = new Map()
 
@@ -181,10 +187,18 @@ function App() {
   const touchStartX = useRef(null)
   const adminScreenRef = useRef(null)
   const adminPasswordRef = useRef(null)
+  // Cambia cada vez que la familia modera o borra; una revisión automática que
+  // empezó antes descarta su respuesta para no regresar fotos ya movidas.
+  const photoChangesRef = useRef(0)
 
   useEffect(() => {
     loadPublishedPhotos()
   }, [])
+
+  // Cada pantalla (portada, subir fotos, confirmación) se abre desde arriba
+  useLayoutEffect(() => {
+    if (view !== 'admin') window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [view])
 
   useLayoutEffect(() => {
     if (view !== 'admin') return
@@ -200,6 +214,28 @@ function App() {
     if (view === 'admin' && isAdminAuthenticated) {
       loadPendingPhotos()
       loadArchivedPhotos()
+    }
+  }, [view, isAdminAuthenticated, adminToken])
+
+  // Las fotos nuevas aparecen solas, sin recargar: la galería se revisa cada
+  // 45 s y, en el panel familiar, las pendientes cada 20 s. Solo con la
+  // pantalla visible, y de inmediato al volver a la pestaña.
+  useEffect(() => {
+    if (isStaticDemo) return undefined
+    const watchingAdmin = view === 'admin' && isAdminAuthenticated
+    if (view !== 'home' && !watchingAdmin) return undefined
+
+    function refresh() {
+      if (document.visibilityState !== 'visible') return
+      loadPublishedPhotos({ background: true })
+      if (watchingAdmin) loadPendingPhotos({ background: true })
+    }
+
+    const timer = window.setInterval(refresh, watchingAdmin ? 20000 : 45000)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refresh)
     }
   }, [view, isAdminAuthenticated, adminToken])
 
@@ -247,21 +283,24 @@ function App() {
     return () => window.removeEventListener('keydown', handleLightboxKeyDown)
   }, [lightboxIndex, lightboxPhotos])
 
-  async function loadPublishedPhotos() {
+  async function loadPublishedPhotos({ background = false } = {}) {
     if (isStaticDemo) {
       return
     }
 
+    const changesAtStart = photoChangesRef.current
     try {
       const response = await fetch(`${apiUrl}/api/photos?status=published`)
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.message || 'No se pudieron cargar los recuerdos.')
       }
-      setPublishedPhotos(data.photos ?? [])
+      if (background && photoChangesRef.current !== changesAtStart) return
+      setPublishedPhotos((current) => keepIfUnchanged(current, data.photos ?? []))
     } catch (error) {
       console.error('Error loading published photos', error)
-      setStatusMessage(error.message)
+      // Un fallo en una revisión automática no se muestra; se reintenta sola
+      if (!background) setStatusMessage(error.message)
     }
   }
 
@@ -290,21 +329,23 @@ function App() {
     return response
   }
 
-  async function loadPendingPhotos() {
+  async function loadPendingPhotos({ background = false } = {}) {
     if (isStaticDemo) {
       return
     }
 
+    const changesAtStart = photoChangesRef.current
     try {
       const response = await adminFetch('/api/photos?status=pending')
       const data = await response.json()
       if (!response.ok) {
         throw new Error(data.message || 'No se pudieron cargar las fotos pendientes.')
       }
-      setPendingPhotos(data.photos ?? [])
+      if (background && photoChangesRef.current !== changesAtStart) return
+      setPendingPhotos((current) => keepIfUnchanged(current, data.photos ?? []))
     } catch (error) {
       console.error('Error loading pending photos', error)
-      setAdminError(error.message)
+      if (!background) setAdminError(error.message)
     }
   }
 
@@ -508,6 +549,7 @@ function App() {
       return true
     }
 
+    photoChangesRef.current += 1
     try {
       const response = await adminFetch(`/api/photos/${id}`, {
         method: 'PATCH',
@@ -521,6 +563,8 @@ function App() {
     } catch (error) {
       setAdminError(error.message || 'No se pudo actualizar la fotografía.')
       return false
+    } finally {
+      photoChangesRef.current += 1
     }
 
     setSelectedPhotoIds((current) => current.filter((photoId) => photoId !== id))
@@ -577,6 +621,7 @@ function App() {
     setAdminError('')
     setAdminNotice('')
     setDeletingPhotoIds((current) => [...current, id])
+    photoChangesRef.current += 1
 
     try {
       let warning = ''
@@ -606,6 +651,7 @@ function App() {
       setAdminError(error.message || 'No se pudo eliminar la foto.')
       return false
     } finally {
+      photoChangesRef.current += 1
       setDeletingPhotoIds((current) => current.filter((photoId) => photoId !== id))
     }
   }
@@ -941,6 +987,35 @@ function App() {
                 )}
               </div>
             </section>
+
+            {familyPhotos.length > 0 && (
+              <section className="family-album" aria-label={familyMessage.title}>
+                <figure className="family-letter">
+                  <span className="guest-note-mark" aria-hidden="true">“</span>
+                  <h2>{familyMessage.title}</h2>
+                  <blockquote>{familyMessage.text}</blockquote>
+                  <figcaption>{familyMessage.signature}</figcaption>
+                </figure>
+                <div className="family-columns">
+                  {splitIntoColumns(familyPhotos).map((column, columnIndex) => (
+                    <div className="family-column" key={columnIndex}>
+                      {column.map(({ photo, index }) => (
+                        <button
+                          type="button"
+                          key={photo.id}
+                          className="photo-card"
+                          style={{ aspectRatio: `1 / ${photo.ratio}` }}
+                          onClick={() => openLightbox(index, familyPhotos, false)}
+                          aria-label="Abrir foto en pantalla completa"
+                        >
+                          <PhotoImage src={photo.image_url} alt="Matías" loading="lazy" decoding="async" />
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {!isStaticDemo && publishedPhotos.length > 0 ? (
               <section className="gallery-section" id="gallery">
