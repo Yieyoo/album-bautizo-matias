@@ -957,9 +957,12 @@ function App() {
       <div className="phone-frame">
         {view === 'home' && (
           <main className="screen home-screen">
-            <section className="hero-panel">
+            <section className="hero-panel hero-arch">
               <div className="hero-copy">
-                <p className="eyebrow">Bautizo de</p>
+                <div className="hero-portrait">
+                  <img src={`${import.meta.env.BASE_URL}matias/matias-01.jpg`} alt="Matías" />
+                </div>
+                <p className="eyebrow">Mi bautizo</p>
                 <h1>MATÍAS</h1>
                 <p className="date-line">7 de noviembre</p>
                 <div className="heart-divider" aria-hidden="true"><span>†</span></div>
