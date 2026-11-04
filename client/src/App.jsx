@@ -1093,6 +1093,11 @@ function App() {
                   <blockquote>{familyMessage.text}</blockquote>
                   <figcaption>{familyMessage.signature}</figcaption>
                 </figure>
+                <div className="gallery-heading">
+                  <div className="title-divider" aria-hidden="true" />
+                  <h2>Momentos de Matías</h2>
+                  <div className="title-divider" aria-hidden="true" />
+                </div>
                 <div className="family-columns">
                   {splitIntoColumns(familyPhotos).map((column, columnIndex) => (
                     <div className="family-column" key={columnIndex}>
@@ -1101,11 +1106,17 @@ function App() {
                           type="button"
                           key={photo.id}
                           className="photo-card"
-                          style={{ aspectRatio: `1 / ${photo.ratio}` }}
                           onClick={() => openLightbox(index, familyPhotos, false)}
                           aria-label="Abrir foto en pantalla completa"
                         >
-                          <PhotoImage src={photo.image_url} alt="Matías" loading="lazy" decoding="async" />
+                          <PhotoImage
+                            src={photo.image_url}
+                            alt={photo.caption || 'Matías'}
+                            style={{ aspectRatio: `1 / ${photo.ratio}` }}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                          {photo.caption && <span className="photo-caption">{photo.caption}</span>}
                         </button>
                       ))}
                     </div>
