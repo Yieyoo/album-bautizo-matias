@@ -116,28 +116,86 @@ function displayUrl(url) {
 
 // Si el archivo ya no existe en Cloudinary, muestra un recuadro en lugar del
 // ícono de imagen rota.
-// Hojas a lo largo del tallo: posición, ángulo y tamaño, de abajo hacia arriba
-const oliveLeaves = [
-  [92, 180, -150, 1], [84, 160, -20, 1.05], [74, 140, -160, 1.1], [66, 120, -35, 1.1],
-  [57, 100, -165, 1.05], [50, 80, -45, 1], [44, 60, -170, 0.95], [40, 40, -55, 0.9],
-  [37, 22, -175, 0.8],
+// Estrellitas doradas sobre el cielo de la portada: posición (en % de la portada),
+// tamaño base y retraso del brillo. El centro queda libre para el retrato y el nombre.
+const heroDots = [
+  [89.9, 23.4, 4, 2.57], [20.9, 39, 3.5, 1.89], [77.5, 6.3, 3, 0.43], [8.9, 3.6, 2.5, 1.8],
+  [76.1, 17, 4, 2.53], [96.8, 47.8, 2, 2.12], [82.6, 19.8, 2, 2.54], [3.1, 11.6, 2, 1.41],
+  [95.2, 20.3, 2, 1.7], [21.7, 33, 3, 0.26], [8.6, 38.7, 2.5, 2.05], [20.7, 25.4, 2.5, 1.26],
+  [96.1, 2, 4, 0.91], [86.2, 11.7, 3.5, 2.99], [7, 8.7, 3.5, 0.77], [11.5, 28.8, 2.5, 0.05],
+  [15, 29, 4, 0.41], [17.9, 30.9, 4, 0.59], [92.3, 42.6, 4, 0.24], [7.5, 7, 4, 2.89],
 ]
 
-// Rama de olivo a línea fina, como el ícono del álbum, que abraza el retrato
-function OliveBranch({ className }) {
+function GoldCross({ size, style }) {
   return (
-    <svg className={className} viewBox="0 0 120 200" aria-hidden="true">
-      <path className="olive-stem" d="M104 198 C 80 160, 52 110, 36 8" />
-      {oliveLeaves.map(([x, y, angle, scale], index) => (
-        <g key={index} transform={`translate(${x} ${y}) rotate(${angle}) scale(${scale})`}>
-          <path
-            className="olive-leaf"
-            style={{ animationDelay: `${0.5 + index * 0.08}s` }}
-            d="M0 0 C 7 -7, 19 -7, 26 0 C 19 7, 7 7, 0 0 Z"
-          />
-        </g>
-      ))}
+    <svg className="gold-cross" width={size} height={size * 1.4} viewBox="0 0 10 14" style={style} aria-hidden="true">
+      <path d="M5 0.5v13M1 4.5h8" />
     </svg>
+  )
+}
+
+const introSeenKey = 'album-matias-intro-visto'
+
+// El intro se muestra una vez por visita y nunca con "Reducir movimiento"
+function shouldShowIntro() {
+  try {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false
+    return !window.sessionStorage.getItem(introSeenKey)
+  } catch {
+    return false
+  }
+}
+
+// Portada de álbum que se abre como un libro al entrar; tocarla la salta
+function AlbumIntro({ onDone }) {
+  // La página se vuelve a dibujar seguido (p. ej. al revisar fotos nuevas);
+  // con una referencia el temporizador no se reinicia cada vez.
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(introSeenKey, '1')
+    } catch {
+      // Sin almacenamiento el intro podría repetirse al recargar; no pasa nada
+    }
+    const timer = window.setTimeout(() => onDoneRef.current(), 3400)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  // La tapa se dibuja dos veces, una por mitad, para abrirse como dos puertas
+  const cover = (
+    <>
+      <div className="album-cover-stars">
+        {heroDots.map(([left, top, size, delay]) => (
+          <span
+            key={`${left}-${top}`}
+            style={{ left: `${left}%`, top: `${top * 1.6}%`, width: size * 3, height: size * 3, animationDelay: `${delay * 0.4}s` }}
+          />
+        ))}
+      </div>
+      <div className="album-cover-frame">
+        <svg className="album-cover-arch" viewBox="0 0 300 460" preserveAspectRatio="none">
+          {/* Cada lado nace arriba al centro y baja, para trazarse a la vez */}
+          <path pathLength="1" d="M150 8 A142 142 0 0 1 292 150 V452 H150" />
+          <path pathLength="1" d="M150 8 A142 142 0 0 0 8 150 V452 H150" />
+          <path pathLength="1" className="outer" d="M150 -6 A156 156 0 0 1 306 150 V466 H150" />
+          <path pathLength="1" className="outer" d="M150 -6 A156 156 0 0 0 -6 150 V466 H150" />
+        </svg>
+        <GoldCross size={16} style={{ marginBottom: 18 }} />
+        <p className="album-cover-eyebrow">Mi bautizo</p>
+        <p className="album-cover-name">Matías</p>
+        <p className="album-cover-date">7 de noviembre</p>
+      </div>
+    </>
+  )
+
+  return (
+    <div className="album-intro" onClick={onDone} aria-hidden="true">
+      <div className="album-intro-light" />
+      <div className="album-cover album-door-left">{cover}</div>
+      <div className="album-cover album-door-right">{cover}</div>
+    </div>
   )
 }
 
@@ -189,6 +247,8 @@ function App() {
   const [view, setView] = useState(
     new URLSearchParams(window.location.search).has('admin') ? 'admin' : 'home'
   )
+  const [showIntro, setShowIntro] = useState(() => view === 'home' && shouldShowIntro())
+  const [playedIntro] = useState(showIntro)
   const [lightboxIndex, setLightboxIndex] = useState(null)
   const [lightboxPhotos, setLightboxPhotos] = useState([])
   const [lightboxAllowsDownload, setLightboxAllowsDownload] = useState(false)
@@ -979,14 +1039,21 @@ function App() {
 
   return (
     <div className="app-shell">
-      <div className="phone-frame">
+      {showIntro && <AlbumIntro onDone={() => setShowIntro(false)} />}
+      <div className={`phone-frame${playedIntro ? ' after-intro' : ''}`}>
         {view === 'home' && (
           <main className="screen home-screen">
             <section className="hero-panel hero-arch">
+              <div className="hero-dots" aria-hidden="true">
+                {heroDots.map(([left, top, size, delay]) => (
+                  <span
+                    key={`${left}-${top}`}
+                    style={{ left: `${left}%`, top: `${top}%`, width: size * 3, height: size * 3, animationDelay: `${delay}s` }}
+                  />
+                ))}
+              </div>
               <div className="hero-copy">
                 <div className="hero-portrait">
-                  <OliveBranch className="olive-branch olive-left" />
-                  <OliveBranch className="olive-branch olive-right" />
                   <img src={`${import.meta.env.BASE_URL}matias/matias-01.jpg`} alt="Matías" />
                 </div>
                 <p className="eyebrow">Mi bautizo</p>
