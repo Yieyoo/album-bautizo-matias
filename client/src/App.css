@@ -253,7 +253,164 @@
 .upload-panel {
   display: flex;
   flex-direction: column;
+  gap: 26px;
+  padding: 22px 18px 22px;
+}
+
+.upload-intro {
+  padding: 0 6px;
+  text-align: center;
+}
+
+.upload-intro h2 {
+  margin: 0 0 8px;
+  color: #4f6a82;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.upload-intro p {
+  text-wrap: balance;
+  max-width: 330px;
+  margin: 0 auto;
+  color: #7d8f9f;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.upload-step {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
+}
+
+.upload-step + .upload-step {
+  padding-top: 24px;
+  border-top: 1px solid rgba(191, 164, 131, 0.25);
+}
+
+.upload-step-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #32475d;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.upload-step-number {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #e6edf2;
+  color: #5b7184;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.optional-tag {
+  color: #9aa8b4;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.photo-picker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 16px;
+  border: 2px dashed rgba(101, 134, 160, 0.45);
+  border-radius: 20px;
+  background: #f5f8fa;
+  color: #5b7a94;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.photo-picker:hover,
+.photo-picker:active {
+  border-color: #6586a0;
+  background: #edf2f6;
+}
+
+.photo-picker svg {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.photo-picker-title {
+  font-size: 1.08rem;
+  font-weight: 700;
+}
+
+.photo-picker-hint {
+  color: #8a9aa8;
+  font-size: 0.85rem;
+}
+
+.upload-step .selected-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.upload-step .selected-photo {
+  aspect-ratio: 1;
+  border-radius: 12px;
+}
+
+.upload-step .remove-photo {
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.selection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.change-photos {
+  color: #5b7a94;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Sin fotos el botón se ve apagado, para que no parezca que ya se puede enviar */
+.submit-button.is-empty:disabled {
+  background: #e7ebef;
+  color: #9aa8b4;
+  box-shadow: none;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.submit-hint {
+  margin: -16px 0 0;
+  color: #9aa8b4;
+  font-size: 0.85rem;
+  text-align: center;
 }
 
 .upload-button {
@@ -311,6 +468,16 @@
 .admin-login label {
   font-weight: 800;
   color: #32475d;
+}
+
+.upload-step .field-group label {
+  color: #667a8d;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.upload-step .field-group textarea {
+  min-height: 88px;
 }
 
 .field-group input,
@@ -903,6 +1070,7 @@
 }
 
 .share-hint {
+  text-wrap: balance;
   max-width: 320px;
   margin: 0 auto 26px;
   color: #8a9aa8;
@@ -1002,11 +1170,80 @@
 }
 
 .review-notice p {
+  text-wrap: balance;
   max-width: 480px;
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.55;
 }
+
+/* Collage de dos columnas: cada foto conserva su proporción original */
+.gallery-masonry {
+  column-count: 2;
+  column-gap: 12px;
+}
+
+.gallery-masonry > * {
+  break-inside: avoid;
+  margin: 0 0 12px;
+}
+
+.gallery-masonry .photo-card {
+  display: block;
+  width: 100%;
+  aspect-ratio: auto;
+  min-height: 120px;
+  border-radius: 16px;
+  background: #eef1f3;
+  box-shadow: 0 6px 16px rgba(44, 50, 54, 0.1);
+}
+
+.gallery-masonry .photo-card img {
+  height: auto;
+}
+
+.gallery-masonry .photo-card .photo-missing {
+  min-height: 160px;
+}
+
+.guest-note {
+  position: relative;
+  padding: 18px 16px 16px;
+  border: 1px solid rgba(191, 164, 131, 0.35);
+  border-radius: 16px;
+  background: #fbf6ee;
+  color: #6f5b49;
+  text-align: center;
+  animation: photo-fade-in 0.6s ease-out both;
+}
+
+.guest-note-mark {
+  display: block;
+  height: 26px;
+  color: #c9a274;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.guest-note blockquote {
+  margin: 0 0 10px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.15rem;
+  font-style: italic;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.guest-note figcaption {
+  color: #a48666;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+
 
 .site-footer {
   display: flex;
@@ -1273,6 +1510,18 @@
 .home-screen .hero-copy > :nth-child(5) { animation-delay: 0.5s; }
 .home-screen .hero-copy > :nth-child(6) { animation-delay: 0.62s; }
 .home-screen .hero-copy > :nth-child(n + 7) { animation-delay: 0.74s; }
+
+/* Al abrir "Comparte tus fotos" el título y cada paso entran en cascada */
+.upload-screen > *,
+.upload-screen .upload-panel > * {
+  animation: rise-in 0.55s ease-out both;
+}
+
+.upload-screen > :nth-child(2) { animation-delay: 0.08s; }
+.upload-screen > :nth-child(3) { animation-delay: 0.16s; }
+.upload-screen .upload-panel > :nth-child(1) { animation-delay: 0.26s; }
+.upload-screen .upload-panel > :nth-child(2) { animation-delay: 0.36s; }
+.upload-screen .upload-panel > :nth-child(n + 3) { animation-delay: 0.46s; }
 
 /* Un brillo que cruza el botón de vez en cuando para invitar a tocarlo */
 .hero-cta {

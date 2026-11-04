@@ -206,6 +206,13 @@ function App() {
     }
   }, [view, isAdminAuthenticated, adminToken])
 
+  const gallerySubmissions = useMemo(() => groupPhotosBySubmission(publishedPhotos), [publishedPhotos])
+  // El visor recorre las fotos en el mismo orden en que se ven en el collage
+  const galleryPhotos = useMemo(
+    () => gallerySubmissions.flatMap((submission) => submission.photos),
+    [gallerySubmissions]
+  )
+
   // Las vistas previas se crean una vez por selección; antes se regeneraban
   // con cada letra escrita en el nombre o el mensaje.
   const previewUrls = useMemo(
@@ -953,33 +960,53 @@ function App() {
                   <div className="title-divider" aria-hidden="true" />
                   <h2>Recuerdos</h2>
                   <div className="title-divider" aria-hidden="true" />
-                  <p>Un pequeño álbum de este gran día</p>
+                  <p>
+                    {galleryPhotos.length === 1
+                      ? '1 recuerdo compartido por nuestros invitados'
+                      : `${galleryPhotos.length} recuerdos compartidos por nuestros invitados`}
+                  </p>
                 </div>
-                <div className="gallery-grid">
-                  {publishedPhotos.map((photo, index) => (
-                    <button
-                      type="button"
-                      key={photo.id}
-                      className="photo-card"
-                      onClick={() => openLightbox(index)}
-                      aria-label="Abrir foto en pantalla completa"
-                    >
-                      <PhotoImage
-                        src={thumbnailUrl(photo.image_url)}
-                        alt={photo.message || 'Foto del bautizo'}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </button>
-                  ))}
+                <div className="gallery-masonry">
+                  {gallerySubmissions.map((submission) => {
+                    const hasNote = (submission.message ?? '').trim() !== ''
+                    return submission.photos.flatMap((photo, photoIndex) => {
+                      const tiles = [
+                        <button
+                          type="button"
+                          key={photo.id}
+                          className="photo-card"
+                          onClick={() => openLightbox(galleryPhotos.indexOf(photo), galleryPhotos)}
+                          aria-label="Abrir foto en pantalla completa"
+                        >
+                          <PhotoImage
+                            src={thumbnailUrl(photo.image_url)}
+                            alt={photo.message || 'Foto del bautizo'}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </button>,
+                      ]
+                      // El mensaje del invitado va junto a su primera foto, como en un libro de firmas
+                      if (hasNote && photoIndex === 0) {
+                        tiles.push(
+                          <figure key={`${submission.id}-note`} className="guest-note">
+                            <span className="guest-note-mark" aria-hidden="true">“</span>
+                            <blockquote>{submission.message}</blockquote>
+                            <figcaption>{submission.guest_name || 'Invitado'}</figcaption>
+                          </figure>
+                        )
+                      }
+                      return tiles
+                    })
+                  })}
                 </div>
               </section>
             ) : (
               <section className="review-notice" aria-live="polite">
                 <span className="review-notice-mark" aria-hidden="true">✦</span>
-                <h2>Fotografías en revisión</h2>
+                <h2>El álbum se está llenando</h2>
                 <p>
-                  La familia revisará las fotografías. Las que decida publicar aparecerán aquí.
+                  Aquí aparecerán las fotos de los invitados en cuanto la familia las revise.
                 </p>
               </section>
             )}
@@ -1015,83 +1042,124 @@ function App() {
               </button>
             </div>
 
+            <div className="upload-intro">
+              <h2>Comparte tus fotos</h2>
+              <p>
+                Elige las fotos que tomaste hoy. La familia las revisará antes de
+                publicarlas en el álbum.
+              </p>
+            </div>
+
             <div className="upload-panel">
-              <h2>Selecciona tus fotos</h2>
               {isStaticDemo && (
                 <p className="status-message">
                   El envío de fotografías todavía no está disponible; las fotos no se enviarán a la familia.
                 </p>
               )}
 
-              <p className="selection-count">Fotografías (obligatorio)</p>
-              <input
-                ref={fileInputRef}
-                id="photo-upload"
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                multiple
-                onChange={handlePhotoPick}
-                hidden
-              />
-
-              <label htmlFor="photo-upload" className="primary-button upload-button">
-                + Seleccionar fotografías
-              </label>
-
-              {selectedFiles.length > 0 && (
-                <div className="selected-grid">
-                  {selectedFiles.map((file, index) => {
-                    return (
-                      <div className="selected-photo" key={`${file.name}-${index}`}>
-                        <img src={previewUrls[index]} alt={file.name} decoding="async" />
-                        <button
-                          type="button"
-                          className="remove-photo"
-                          onClick={() => handleRemoveSelected(index)}
-                          aria-label={`Eliminar ${file.name}`}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {selectedFiles.length > 0 && (
-                <p className="selection-count">{selectedFiles.length} fotos seleccionadas</p>
-              )}
-
-              <div className="field-group">
-                <label htmlFor="guestName">Nombre (opcional)</label>
+              <section className="upload-step">
+                <h3 className="upload-step-title">
+                  <span className="upload-step-number" aria-hidden="true">1</span>
+                  Elige tus fotos
+                </h3>
                 <input
-                  id="guestName"
-                  type="text"
-                  placeholder="Ej. María"
-                  value={guestName}
-                  onChange={(event) => setGuestName(event.target.value)}
+                  ref={fileInputRef}
+                  id="photo-upload"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={handlePhotoPick}
+                  hidden
                 />
-              </div>
 
-              <div className="field-group">
-                <label htmlFor="message">Mensaje (opcional)</label>
-                <textarea
-                  id="message"
-                  rows="4"
-                  placeholder="Escribe una felicitación para Matías ❤️"
-                  value={message}
-                  onChange={(event) => setMessage(event.target.value)}
-                />
-              </div>
+                {selectedFiles.length === 0 ? (
+                  <label htmlFor="photo-upload" className="photo-picker">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 7h3l1.4-2h7.2L17 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                    <span className="photo-picker-title">Toca para elegir fotos</span>
+                    <span className="photo-picker-hint">Puedes elegir hasta 20 a la vez</span>
+                  </label>
+                ) : (
+                  <>
+                    <div className="selected-grid">
+                      {selectedFiles.map((file, index) => {
+                        return (
+                          <div className="selected-photo" key={`${file.name}-${index}`}>
+                            <img src={previewUrls[index]} alt={file.name} decoding="async" />
+                            <button
+                              type="button"
+                              className="remove-photo"
+                              onClick={() => handleRemoveSelected(index)}
+                              aria-label={`Eliminar ${file.name}`}
+                              disabled={uploading}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="selection-summary">
+                      <p className="selection-count">
+                        {selectedFiles.length === 1 ? '1 foto lista' : `${selectedFiles.length} fotos listas`}
+                      </p>
+                      {!uploading && (
+                        <label htmlFor="photo-upload" className="change-photos">
+                          Elegir otras
+                        </label>
+                      )}
+                    </div>
+                  </>
+                )}
+              </section>
+
+              <section className="upload-step">
+                <h3 className="upload-step-title">
+                  <span className="upload-step-number" aria-hidden="true">2</span>
+                  Un mensaje para la familia
+                  <span className="optional-tag">opcional</span>
+                </h3>
+
+                <div className="field-group">
+                  <label htmlFor="guestName">Tu nombre</label>
+                  <input
+                    id="guestName"
+                    type="text"
+                    placeholder="Ej. Tía María"
+                    value={guestName}
+                    onChange={(event) => setGuestName(event.target.value)}
+                  />
+                </div>
+
+                <div className="field-group">
+                  <label htmlFor="message">Mensaje</label>
+                  <textarea
+                    id="message"
+                    rows="3"
+                    placeholder="Déjale un mensaje bonito a la familia de Matías ❤️"
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                  />
+                </div>
+              </section>
 
               <button
                 type="button"
-                className="primary-button submit-button"
+                className={`primary-button submit-button${selectedFiles.length === 0 ? ' is-empty' : ''}`}
                 onClick={handleSubmitPhotos}
                 disabled={uploading || selectedFiles.length === 0}
               >
-                {uploading ? 'Subiendo tus fotos...' : '❤️ Compartir recuerdos'}
+                {uploading
+                  ? 'Subiendo tus fotos...'
+                  : selectedFiles.length > 1
+                    ? `Enviar ${selectedFiles.length} fotos`
+                    : 'Enviar foto'}
               </button>
+              {!uploading && selectedFiles.length === 0 && (
+                <p className="submit-hint">Primero elige al menos una foto.</p>
+              )}
 
               {uploading && (
                 <div className="progress-box" aria-live="polite">
