@@ -395,6 +395,28 @@ app.use((error, req, res, next) => {
   next(error)
 })
 
+// Render duerme el plan gratuito tras 15 minutos sin tráfico y el primer
+// invitado esperaría cerca de un minuto. Visitarse por la URL pública cuenta
+// como tráfico; solo se hace hasta pasar el evento para no gastar horas gratis.
+const KEEP_AWAKE_UNTIL = Date.parse('2026-11-10T06:00:00Z')
+const KEEP_AWAKE_INTERVAL_MS = 10 * 60 * 1000
+
+function keepAwake() {
+  const publicUrl = process.env.RENDER_EXTERNAL_URL
+  if (!publicUrl) return
+
+  const timer = setInterval(() => {
+    if (Date.now() > KEEP_AWAKE_UNTIL) {
+      clearInterval(timer)
+      return
+    }
+    fetch(`${publicUrl}/api/event`).catch((error) => {
+      console.error('Keep-awake ping failed', error?.message)
+    })
+  }, KEEP_AWAKE_INTERVAL_MS)
+}
+
 app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`)
+  keepAwake()
 })
