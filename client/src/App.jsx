@@ -220,10 +220,19 @@ const introSparks = Array.from({ length: 18 }, (_, index) => {
   return [Math.cos(angle) * distance, Math.sin(angle) * distance * 1.3, 3.15 + (index % 5) * 0.05]
 })
 
-function PhotoImage({ src, alt, ...props }) {
-  const [failedSrc, setFailedSrc] = useState(null)
+const PHOTO_RETRIES = 2
 
-  if (failedSrc === src) {
+// Con mala señal (o justo al publicar una versión nueva) una foto puede fallar
+// una vez; se reintenta sola antes de mostrar "Foto no disponible".
+function PhotoImage({ src, alt, ...props }) {
+  const [failure, setFailure] = useState({ src: null, count: 0 })
+  const failures = failure.src === src ? failure.count : 0
+
+  function handleError() {
+    window.setTimeout(() => setFailure({ src, count: failures + 1 }), 1200 * (failures + 1))
+  }
+
+  if (failures > PHOTO_RETRIES) {
     return (
       <span className="photo-missing" role="img" aria-label={alt || 'Foto no disponible'}>
         Foto no disponible
@@ -231,7 +240,9 @@ function PhotoImage({ src, alt, ...props }) {
     )
   }
 
-  return <img src={src} alt={alt} onError={() => setFailedSrc(src)} {...props} />
+  // Un parámetro distinto en cada reintento evita que el navegador repita el error guardado
+  const attemptSrc = failures ? `${src}${src.includes('?') ? '&' : '?'}reintento=${failures}` : src
+  return <img key={attemptSrc} src={attemptSrc} alt={alt} onError={handleError} {...props} />
 }
 
 // Evita volver a dibujar la galería cuando una revisión trae exactamente lo mismo
