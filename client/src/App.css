@@ -1372,7 +1372,7 @@
 }
 
 .family-column .photo-card:nth-child(even),
-.gallery-masonry > :nth-child(even) {
+.gallery-column > :nth-child(even) {
   rotate: 1.4deg;
 }
 
@@ -1384,7 +1384,7 @@
   rotate: -1.5deg;
 }
 
-.gallery-masonry > :nth-child(3n) {
+.gallery-column > :nth-child(3n) {
   rotate: -0.6deg;
 }
 
@@ -1459,13 +1459,17 @@
 
 /* Collage de dos columnas: cada foto conserva su proporción original */
 .gallery-masonry {
-  column-count: 2;
-  column-gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
 }
 
-.gallery-masonry > * {
-  break-inside: avoid;
-  margin: 12px 0 22px;
+.gallery-column {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-top: 12px;
 }
 
 .gallery-masonry .photo-card {
@@ -1498,19 +1502,6 @@
   z-index: 1;
   padding: 8px 8px 30px;
   border-radius: 3px;
-}
-
-/* Un bloque de varias fotos va clavado con una chincheta en lugar de cinta */
-.gallery-masonry .photo-stack.is-stacked .photo-card::before {
-  top: -6px;
-  width: 18px;
-  height: 18px;
-  max-width: none;
-  border-radius: 50%;
-  rotate: 0deg;
-  background: radial-gradient(circle at 35% 35%, #f08a74 0%, #d4472f 45%, #9e2c1c 100%);
-  box-shadow: 0 3px 4px rgba(44, 50, 54, 0.35);
-  clip-path: none;
 }
 
 .photo-stack-layer {

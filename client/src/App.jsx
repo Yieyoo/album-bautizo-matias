@@ -359,6 +359,20 @@ function App() {
 
   const gallerySubmissions = useMemo(() => groupPhotosBySubmission(publishedPhotos), [publishedPhotos])
   // El visor recorre las fotos en el mismo orden en que se ven en el collage
+  // Dos columnas armadas a mano en lugar de column-count: Safari en iPhone
+  // pintaba pedazos sueltos (como la cinta) de los bloques girados en la otra
+  // columna. Cada bloque va a la más corta según un alto aproximado.
+  const galleryColumns = useMemo(() => {
+    const columns = [[], []]
+    const heights = [0, 0]
+    gallerySubmissions.forEach((submission, index) => {
+      const target = heights[0] <= heights[1] ? 0 : 1
+      columns[target].push({ submission, index })
+      const note = (submission.message ?? '').trim()
+      heights[target] += 1 + (note ? 0.4 + note.length / 120 : 0)
+    })
+    return columns
+  }, [gallerySubmissions])
   const galleryPhotos = useMemo(
     () => gallerySubmissions.flatMap((submission) => submission.photos),
     [gallerySubmissions]
@@ -1203,56 +1217,60 @@ function App() {
                   </p>
                 </div>
                 <div className="gallery-masonry">
-                  {gallerySubmissions.map((submission, submissionIndex) => {
-                    const hasNote = (submission.message ?? '').trim() !== ''
-                    const [coverPhoto, ...restPhotos] = submission.photos
-                    const photoCount = submission.photos.length
-                    const photoTape = tapeFor(submissionIndex)
-                    // Cada invitado es un solo bloque: sus fotos apiladas y su
-                    // mensaje debajo, como en un libro de firmas. Al tocarlo se
-                    // recorren solo las fotos de ese envío.
-                    return (
-                      <article key={submission.id} className="guest-block">
-                        <div className={`photo-stack${photoCount > 1 ? ' is-stacked' : ''}`}>
-                          {restPhotos.slice(0, 2).map((photo, layerIndex) => (
-                            <div key={photo.id} className={`photo-stack-layer layer-${layerIndex + 1}`} aria-hidden="true">
-                              <PhotoImage src={thumbnailUrl(photo.image_url)} alt="" loading="lazy" decoding="async" />
+                  {galleryColumns.map((column, columnIndex) => (
+                    <div className="gallery-column" key={columnIndex}>
+                      {column.map(({ submission, index: submissionIndex }) => {
+                        const hasNote = (submission.message ?? '').trim() !== ''
+                        const [coverPhoto, ...restPhotos] = submission.photos
+                        const photoCount = submission.photos.length
+                        const photoTape = tapeFor(submissionIndex)
+                        // Cada invitado es un solo bloque: sus fotos apiladas y su
+                        // mensaje debajo, como en un libro de firmas. Al tocarlo se
+                        // recorren solo las fotos de ese envío.
+                        return (
+                          <article key={submission.id} className="guest-block">
+                            <div className={`photo-stack${photoCount > 1 ? ' is-stacked' : ''}`}>
+                              {restPhotos.slice(0, 2).map((photo, layerIndex) => (
+                                <div key={photo.id} className={`photo-stack-layer layer-${layerIndex + 1}`} aria-hidden="true">
+                                  <PhotoImage src={thumbnailUrl(photo.image_url)} alt="" loading="lazy" decoding="async" />
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                className={`photo-card ${photoTape.className}`}
+                                style={photoTape.style}
+                                onClick={() => openLightbox(0, submission.photos)}
+                                aria-label={
+                                  photoCount > 1
+                                    ? `Ver las ${photoCount} fotos de ${submission.guest_name || 'invitado'}`
+                                    : 'Abrir foto en pantalla completa'
+                                }
+                              >
+                                <PhotoImage
+                                  src={thumbnailUrl(coverPhoto.image_url)}
+                                  alt={coverPhoto.message || 'Foto del bautizo'}
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                                {photoCount > 1 && (
+                                  <span className="photo-stack-count" aria-hidden="true">
+                                    {photoCount} fotos
+                                  </span>
+                                )}
+                              </button>
                             </div>
-                          ))}
-                          <button
-                            type="button"
-                            className={`photo-card ${photoTape.className}`}
-                            style={photoTape.style}
-                            onClick={() => openLightbox(0, submission.photos)}
-                            aria-label={
-                              photoCount > 1
-                                ? `Ver las ${photoCount} fotos de ${submission.guest_name || 'invitado'}`
-                                : 'Abrir foto en pantalla completa'
-                            }
-                          >
-                            <PhotoImage
-                              src={thumbnailUrl(coverPhoto.image_url)}
-                              alt={coverPhoto.message || 'Foto del bautizo'}
-                              loading="lazy"
-                              decoding="async"
-                            />
-                            {photoCount > 1 && (
-                              <span className="photo-stack-count" aria-hidden="true">
-                                {photoCount} fotos
-                              </span>
+                            {hasNote && (
+                              <figure className="guest-note">
+                                <span className="guest-note-mark" aria-hidden="true">“</span>
+                                <blockquote>{submission.message}</blockquote>
+                                <figcaption>{submission.guest_name || 'Invitado'}</figcaption>
+                              </figure>
                             )}
-                          </button>
-                        </div>
-                        {hasNote && (
-                          <figure className="guest-note">
-                            <span className="guest-note-mark" aria-hidden="true">“</span>
-                            <blockquote>{submission.message}</blockquote>
-                            <figcaption>{submission.guest_name || 'Invitado'}</figcaption>
-                          </figure>
-                        )}
-                      </article>
-                    )
-                  })}
+                          </article>
+                        )
+                      })}
+                    </div>
+                  ))}
                 </div>
               </section>
             ) : (
