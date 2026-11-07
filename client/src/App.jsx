@@ -1411,6 +1411,7 @@ function App() {
                     id="guestName"
                     type="text"
                     placeholder="Ej. Tía María"
+                    maxLength={60}
                     value={guestName}
                     onChange={(event) => setGuestName(event.target.value)}
                   />
@@ -1422,6 +1423,7 @@ function App() {
                     id="message"
                     rows="3"
                     placeholder="Déjale un mensaje bonito a la familia de Matías ❤️"
+                    maxLength={500}
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
                   />

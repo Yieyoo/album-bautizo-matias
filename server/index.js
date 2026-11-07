@@ -55,8 +55,18 @@ const upload = multer({
     files: 20,
     // Límite de Cloudinary en el plan gratuito
     fileSize: 10 * 1024 * 1024,
+    // Nombre y mensaje son textos cortos; esto frena envíos gigantes desde un script
+    fieldSize: 16 * 1024,
   },
 })
+
+const GUEST_NAME_MAX_LENGTH = 60
+const MESSAGE_MAX_LENGTH = 500
+
+// Corta por caracteres completos para no partir un emoji a la mitad
+function limitText(value, maxLength) {
+  return [...(typeof value === 'string' ? value.trim() : '')].slice(0, maxLength).join('').trim()
+}
 
 const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp']
 
@@ -202,8 +212,8 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
   }
 
   const files = req.files ?? []
-  const guestName = req.body.guestName?.trim() ?? ''
-  const message = req.body.message?.trim() ?? ''
+  const guestName = limitText(req.body.guestName, GUEST_NAME_MAX_LENGTH)
+  const message = limitText(req.body.message, MESSAGE_MAX_LENGTH)
   // El cliente sube una foto por petición y manda sus propios identificadores:
   // así las fotos de un envío quedan juntas y un reintento no crea duplicados.
   const submissionId = isUuid(req.body.submissionId) ? req.body.submissionId : randomUUID()
