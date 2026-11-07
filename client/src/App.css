@@ -971,6 +971,16 @@
   color: #fff;
 }
 
+.lightbox-counter {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .lightbox-meta strong {
   display: block;
   font-size: 1rem;
@@ -1471,6 +1481,102 @@
 
 .gallery-masonry .photo-card .photo-missing {
   min-height: 160px;
+}
+
+/* Envío de un invitado: sus fotos amontonadas y el mensaje justo debajo */
+.photo-stack {
+  position: relative;
+}
+
+/* Margen para que las fotos de atrás asomen sin salirse de la columna */
+.photo-stack.is-stacked {
+  margin: 10px 12px 6px;
+}
+
+/* Marco de polaroid: orilla blanca con la parte de abajo más ancha */
+.gallery-masonry .photo-stack .photo-card {
+  z-index: 1;
+  padding: 8px 8px 30px;
+  border-radius: 3px;
+}
+
+/* Un bloque de varias fotos va clavado con una chincheta en lugar de cinta */
+.gallery-masonry .photo-stack.is-stacked .photo-card::before {
+  top: -6px;
+  width: 18px;
+  height: 18px;
+  max-width: none;
+  border-radius: 50%;
+  rotate: 0deg;
+  background: radial-gradient(circle at 35% 35%, #f08a74 0%, #d4472f 45%, #9e2c1c 100%);
+  box-shadow: 0 3px 4px rgba(44, 50, 54, 0.35);
+  clip-path: none;
+}
+
+.photo-stack-layer {
+  position: absolute;
+  inset: 0;
+  padding: 8px 8px 30px;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow:
+    0 1px 2px rgba(44, 50, 54, 0.08),
+    0 8px 18px rgba(44, 50, 54, 0.1);
+  overflow: hidden;
+  transition: rotate 0.25s ease, translate 0.25s ease;
+}
+
+.photo-stack-layer img,
+.photo-stack-layer .photo-missing {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.photo-stack-layer.layer-1 {
+  rotate: 7deg;
+  translate: 8px -4px;
+}
+
+.photo-stack-layer.layer-2 {
+  rotate: -8deg;
+  translate: -8px 6px;
+}
+
+/* Al tocar el bloque las fotos de atrás se abren un poco, como un abanico */
+.photo-stack:hover .layer-1,
+.photo-stack:active .layer-1 {
+  rotate: 11deg;
+  translate: 12px -4px;
+}
+
+.photo-stack:hover .layer-2,
+.photo-stack:active .layer-2 {
+  rotate: -12deg;
+  translate: -12px 8px;
+}
+
+/* El número de fotos va escrito en la orilla de abajo de la polaroid */
+.photo-stack-count {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  color: #8a7560;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 0.95rem;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.guest-block .guest-note {
+  margin: 16px 0 0;
+}
+
+/* La cinta ya va en la foto; el mensaje queda como parte del mismo bloque */
+.gallery-masonry .guest-block .guest-note::before {
+  display: none;
 }
 
 .guest-note {

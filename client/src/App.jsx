@@ -1203,44 +1203,55 @@ function App() {
                   </p>
                 </div>
                 <div className="gallery-masonry">
-                  {gallerySubmissions.map((submission) => {
+                  {gallerySubmissions.map((submission, submissionIndex) => {
                     const hasNote = (submission.message ?? '').trim() !== ''
-                    return submission.photos.flatMap((photo, photoIndex) => {
-                      const position = galleryPhotos.indexOf(photo)
-                      const photoTape = tapeFor(position * 2)
-                      const tiles = [
-                        <button
-                          type="button"
-                          key={photo.id}
-                          className={`photo-card ${photoTape.className}`}
-                          style={photoTape.style}
-                          onClick={() => openLightbox(position, galleryPhotos)}
-                          aria-label="Abrir foto en pantalla completa"
-                        >
-                          <PhotoImage
-                            src={thumbnailUrl(photo.image_url)}
-                            alt={photo.message || 'Foto del bautizo'}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </button>,
-                      ]
-                      // El mensaje del invitado va junto a su primera foto, como en un libro de firmas
-                      if (hasNote && photoIndex === 0) {
-                        tiles.push(
-                          <figure
-                            key={`${submission.id}-note`}
-                            className={`guest-note ${tapeFor(position * 2 + 1).className}`}
-                            style={tapeFor(position * 2 + 1).style}
+                    const [coverPhoto, ...restPhotos] = submission.photos
+                    const photoCount = submission.photos.length
+                    const photoTape = tapeFor(submissionIndex)
+                    // Cada invitado es un solo bloque: sus fotos apiladas y su
+                    // mensaje debajo, como en un libro de firmas. Al tocarlo se
+                    // recorren solo las fotos de ese envío.
+                    return (
+                      <article key={submission.id} className="guest-block">
+                        <div className={`photo-stack${photoCount > 1 ? ' is-stacked' : ''}`}>
+                          {restPhotos.slice(0, 2).map((photo, layerIndex) => (
+                            <div key={photo.id} className={`photo-stack-layer layer-${layerIndex + 1}`} aria-hidden="true">
+                              <PhotoImage src={thumbnailUrl(photo.image_url)} alt="" loading="lazy" decoding="async" />
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            className={`photo-card ${photoTape.className}`}
+                            style={photoTape.style}
+                            onClick={() => openLightbox(0, submission.photos)}
+                            aria-label={
+                              photoCount > 1
+                                ? `Ver las ${photoCount} fotos de ${submission.guest_name || 'invitado'}`
+                                : 'Abrir foto en pantalla completa'
+                            }
                           >
+                            <PhotoImage
+                              src={thumbnailUrl(coverPhoto.image_url)}
+                              alt={coverPhoto.message || 'Foto del bautizo'}
+                              loading="lazy"
+                              decoding="async"
+                            />
+                            {photoCount > 1 && (
+                              <span className="photo-stack-count" aria-hidden="true">
+                                {photoCount} fotos
+                              </span>
+                            )}
+                          </button>
+                        </div>
+                        {hasNote && (
+                          <figure className="guest-note">
                             <span className="guest-note-mark" aria-hidden="true">“</span>
                             <blockquote>{submission.message}</blockquote>
                             <figcaption>{submission.guest_name || 'Invitado'}</figcaption>
                           </figure>
-                        )
-                      }
-                      return tiles
-                    })
+                        )}
+                      </article>
+                    )
                   })}
                 </div>
               </section>
@@ -1550,6 +1561,11 @@ function App() {
             )}
 
             <div className="lightbox-meta">
+              {lightboxPhotos.length > 1 && (
+                <span className="lightbox-counter">
+                  {lightboxIndex + 1} / {lightboxPhotos.length}
+                </span>
+              )}
               <strong>{lightboxPhotos[lightboxIndex].guest_name || 'Invitado'}</strong>
               <p>{lightboxPhotos[lightboxIndex].message || 'Recuerdo del bautizo'}</p>
               {lightboxAllowsDownload && (
