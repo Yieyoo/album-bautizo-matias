@@ -115,6 +115,10 @@ function getLoginLockRemainingMs(ip) {
 
 function recordFailedLogin(ip) {
   const now = Date.now()
+  // Limpia los bloqueos vencidos de otras IP para que el registro no crezca sin fin
+  for (const [otherIp, otherEntry] of failedLogins) {
+    if (otherEntry.resetAt <= now) failedLogins.delete(otherIp)
+  }
   const entry = failedLogins.get(ip)
   if (!entry || entry.resetAt <= now) {
     failedLogins.set(ip, { count: 1, resetAt: now + LOGIN_LOCKOUT_MS })
@@ -203,7 +207,7 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
   // El cliente sube una foto por petición y manda sus propios identificadores:
   // así las fotos de un envío quedan juntas y un reintento no crea duplicados.
   const submissionId = isUuid(req.body.submissionId) ? req.body.submissionId : randomUUID()
-  const photoId = files.length === 1 && isUuid(req.body.photoId) ? req.body.photoId : undefined
+  let photoId = files.length === 1 && isUuid(req.body.photoId) ? req.body.photoId : undefined
 
   if (!files.length) {
     return res.status(400).json({ message: 'Debes seleccionar al menos una foto.' })
@@ -216,6 +220,28 @@ app.post('/api/photos', upload.array('photos', 20), async (req, res) => {
     return res.status(400).json({
       message: 'Solo se permiten JPG, JPEG, PNG y WEBP de hasta 10 MB.',
     })
+  }
+
+  // El identificador lo manda el celular, así que nunca se reutiliza el de una
+  // foto ya registrada: con overwrite en Cloudinary reemplazaría su imagen.
+  // La única excepción es el reintento de una foto propia que ya se guardó
+  // (sigue pendiente y es del mismo envío): se confirma sin volver a subirla.
+  // Si no se puede consultar, tampoco se confía en el identificador recibido.
+  if (photoId) {
+    let existingPhoto
+    try {
+      existingPhoto = await getPhotoById(photoId)
+    } catch {
+      existingPhoto = { status: 'unknown' }
+    }
+    if (existingPhoto?.status === 'pending' && existingPhoto.submission_id === submissionId) {
+      await removeTemporaryFiles(files)
+      return res.status(201).json({
+        message: 'Tus fotografías quedaron pendientes de revisión familiar.',
+        photos: [existingPhoto],
+      })
+    }
+    if (existingPhoto) photoId = undefined
   }
 
   const uploadedFiles = []
