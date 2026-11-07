@@ -1305,12 +1305,17 @@ function App() {
               <button
                 type="button"
                 className="family-access"
+                aria-label="Acceso familiar"
                 onClick={() => {
                   window.scrollTo({ top: 0, behavior: 'auto' })
                   setView('admin')
                 }}
               >
-                Acceso familiar
+                {/* Solo un candado discreto, para no invitar a los curiosos */}
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="5" y="11" width="14" height="9" rx="2" />
+                  <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                </svg>
               </button>
             </footer>
 

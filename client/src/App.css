@@ -1636,19 +1636,31 @@
 }
 
 .family-access {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
   border: 0;
   background: transparent;
   color: #a4a09a;
-  padding: 6px 4px;
-  font: inherit;
-  font-size: 0.7rem;
-  letter-spacing: 0.03em;
+  padding: 0;
+  opacity: 0.45;
   cursor: pointer;
+}
+
+.family-access svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .family-access:hover,
 .family-access:focus-visible {
   color: #5b7184;
+  opacity: 1;
 }
 
 .gallery-heading {
