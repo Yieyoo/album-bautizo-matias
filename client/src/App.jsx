@@ -288,6 +288,7 @@ function App() {
   const preparedPhotoFiles = useRef(new Map())
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadCount, setUploadCount] = useState({ current: 0, total: 0 })
   const submissionIdRef = useRef(null)
   const photoIdsRef = useRef(new WeakMap())
   const [statusMessage, setStatusMessage] = useState('')
@@ -505,6 +506,7 @@ function App() {
   }
 
   async function handleSubmitPhotos() {
+    if (uploading) return
     if (!selectedFiles.length) {
       setStatusMessage('Selecciona al menos una foto para compartir.')
       return
@@ -528,17 +530,23 @@ function App() {
     // De una en una: si se corta la señal solo hay que repetir la foto afectada
     for (const [index, file] of selectedFiles.entries()) {
       setStatusMessage(`Subiendo foto ${index + 1} de ${total}...`)
+      setUploadCount({ current: index + 1, total })
       if (!photoIdsRef.current.has(file)) {
         photoIdsRef.current.set(file, crypto.randomUUID())
       }
 
       try {
-        await uploadPhotoWithRetry(await prepareImageForUpload(file), {
-          photoId: photoIdsRef.current.get(file),
-          submissionId: submissionIdRef.current,
-          guestName,
-          message,
-        })
+        await uploadPhotoWithRetry(
+          await prepareImageForUpload(file),
+          {
+            photoId: photoIdsRef.current.get(file),
+            submissionId: submissionIdRef.current,
+            guestName,
+            message,
+          },
+          // La barra avanza con los bytes enviados, no solo al terminar cada foto
+          (fraction) => setUploadProgress(Math.round(((index + fraction) / total) * 100))
+        )
       } catch (error) {
         console.error('Error uploading photo', error)
         failedFiles.push(file)
@@ -568,7 +576,7 @@ function App() {
     )
   }
 
-  async function uploadPhotoWithRetry(file, fields) {
+  async function uploadPhotoWithRetry(file, fields, onProgress) {
     const formData = new FormData()
     formData.append('photos', file)
     Object.entries(fields).forEach(([key, value]) => formData.append(key, value))
@@ -579,32 +587,52 @@ function App() {
         await new Promise((resolve) => window.setTimeout(resolve, attempt * 3000))
       }
 
-      const controller = new AbortController()
-      const timeoutId = window.setTimeout(() => controller.abort(), 120000)
+      onProgress(0)
       try {
-        const response = await fetch(`${apiUrl}/api/photos`, {
-          method: 'POST',
-          body: formData,
-          signal: controller.signal,
-        })
-        if (response.ok) return
+        const response = await sendPhoto(formData, onProgress)
+        if (response.ok) {
+          onProgress(1)
+          return
+        }
 
-        const data = await response.json().catch(() => ({}))
-        lastError = new Error(data.message || 'No se pudo subir la foto.')
+        lastError = new Error(response.data.message || 'No se pudo subir la foto.')
         // Un archivo inválido o demasiado grande fallará igual en cada intento
         if ([400, 413].includes(response.status)) break
       } catch (error) {
         lastError = new Error(
-          error.name === 'AbortError'
+          error.name === 'TimeoutError'
             ? 'La subida tardó demasiado. Revisa tu conexión.'
             : 'Se perdió la conexión al subir la foto.'
         )
-      } finally {
-        window.clearTimeout(timeoutId)
       }
     }
 
     throw lastError
+  }
+
+  // fetch no informa el avance de la subida; XMLHttpRequest sí
+  function sendPhoto(formData, onProgress) {
+    return new Promise((resolve, reject) => {
+      const request = new XMLHttpRequest()
+      request.open('POST', `${apiUrl}/api/photos`)
+      request.timeout = 120000
+      request.upload.onprogress = (event) => {
+        // Se deja un margen para la respuesta del servidor tras el último byte
+        if (event.lengthComputable) onProgress((event.loaded / event.total) * 0.95)
+      }
+      request.onload = () => {
+        let data = {}
+        try {
+          data = JSON.parse(request.responseText)
+        } catch {
+          // respuesta sin JSON
+        }
+        resolve({ ok: request.status >= 200 && request.status < 300, status: request.status, data })
+      }
+      request.onerror = () => reject(new Error('network'))
+      request.ontimeout = () => reject(Object.assign(new Error('timeout'), { name: 'TimeoutError' }))
+      request.send(formData)
+    })
   }
 
   async function handleAdminLogin(event) {
@@ -1373,13 +1401,7 @@ function App() {
                 <p className="submit-hint">Primero elige al menos una foto.</p>
               )}
 
-              {uploading && (
-                <div className="progress-box" aria-live="polite">
-                  <div className="progress-bar" style={{ width: `${uploadProgress}%` }} />
-                </div>
-              )}
-
-              {statusMessage && <p className="status-message">{statusMessage}</p>}
+              {!uploading && statusMessage && <p className="status-message">{statusMessage}</p>}
             </div>
           </main>
         )}
@@ -1462,6 +1484,31 @@ function App() {
           </main>
         )}
       </div>
+
+      {uploading && (
+        <div className="upload-overlay">
+          <div className="upload-dialog" role="alertdialog" aria-modal="true" aria-labelledby="upload-dialog-title">
+            <div className="upload-spinner" aria-hidden="true" />
+            <h2 id="upload-dialog-title">Subiendo tus fotos</h2>
+            <p className="upload-dialog-count" aria-live="polite">
+              {uploadCount.total > 1
+                ? `Foto ${uploadCount.current} de ${uploadCount.total}`
+                : 'Enviando tu foto'}
+            </p>
+            <div
+              className="progress-box"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={uploadProgress}
+            >
+              <div className="progress-bar" style={{ width: `${Math.max(uploadProgress, 4)}%` }} />
+            </div>
+            <p className="upload-dialog-percent">{uploadProgress}%</p>
+            <p className="upload-dialog-hint">No cierres esta página hasta que termine.</p>
+          </div>
+        </div>
+      )}
 
       {lightboxIndex !== null && lightboxPhotos[lightboxIndex] && (
         <div className="lightbox-overlay" onClick={closeLightbox}>

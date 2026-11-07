@@ -507,10 +507,92 @@
 }
 
 .progress-bar {
+  position: relative;
   height: 100%;
   background: linear-gradient(90deg, #dcbf7b 0%, #b5825d 100%);
   border-radius: inherit;
   transition: width 0.2s ease;
+  overflow: hidden;
+}
+
+/* Brillo que recorre la barra para que se note que sigue trabajando */
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0) 100%);
+  animation: progress-shine 1.4s linear infinite;
+}
+
+.upload-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 42, 52, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 40;
+  animation: fade-in 0.2s ease-out both;
+}
+
+.upload-dialog {
+  width: min(100%, 340px);
+  background: #fffdf9;
+  border-radius: 24px;
+  padding: 28px 22px 22px;
+  text-align: center;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.2);
+}
+
+.upload-dialog h2 {
+  margin: 14px 0 4px;
+  color: #355a6f;
+}
+
+.upload-dialog-count {
+  margin: 0 0 16px;
+  color: #677789;
+  font-weight: 600;
+}
+
+.upload-dialog-percent {
+  margin: 8px 0 0;
+  color: #b5825d;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.upload-dialog-hint {
+  margin: 12px 0 0;
+  color: #677789;
+  font-size: 0.85rem;
+}
+
+.upload-spinner {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 4px solid #edf1f3;
+  border-top-color: #b5825d;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes progress-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .status-message {
@@ -2304,7 +2386,10 @@
 @media (prefers-reduced-motion: reduce) {
   .phone-frame *,
   .phone-frame *::before,
-  .phone-frame *::after {
+  .phone-frame *::after,
+  .upload-overlay,
+  .upload-overlay *,
+  .upload-overlay *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation: none !important;
