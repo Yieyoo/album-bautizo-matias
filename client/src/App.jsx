@@ -245,6 +245,54 @@ function PhotoImage({ src, alt, ...props }) {
   return <img key={attemptSrc} src={attemptSrc} alt={alt} onError={handleError} {...props} />
 }
 
+// Cada envío de un invitado es un solo bloque: sus fotos apiladas y su mensaje
+// debajo, como en un libro de firmas. Al tocarlo se recorren solo las fotos de
+// ese envío. Sin `onOpen` es solo de muestra (la vista previa al subir).
+function GuestBlock({ photoUrls, guestName, message, tape, onOpen }) {
+  const [coverUrl, ...restUrls] = photoUrls
+  const photoCount = photoUrls.length
+  const note = (message ?? '').trim()
+  const Card = onOpen ? 'button' : 'div'
+
+  return (
+    <article className="guest-block">
+      <div className={`photo-stack${photoCount > 1 ? ' is-stacked' : ''}`}>
+        {restUrls.slice(0, 2).map((url, layerIndex) => (
+          <div key={layerIndex} className={`photo-stack-layer layer-${layerIndex + 1}`} aria-hidden="true">
+            <PhotoImage src={url} alt="" loading="lazy" decoding="async" />
+          </div>
+        ))}
+        <Card
+          {...(onOpen && {
+            type: 'button',
+            onClick: onOpen,
+            'aria-label':
+              photoCount > 1
+                ? `Ver las ${photoCount} fotos de ${guestName || 'invitado'}`
+                : 'Abrir foto en pantalla completa',
+          })}
+          className={`photo-card ${tape.className}`}
+          style={tape.style}
+        >
+          <PhotoImage src={coverUrl} alt="Foto del bautizo" loading="lazy" decoding="async" />
+          {photoCount > 1 && (
+            <span className="photo-stack-count" aria-hidden="true">
+              {photoCount} fotos
+            </span>
+          )}
+        </Card>
+      </div>
+      {note && (
+        <figure className="guest-note">
+          <span className="guest-note-mark" aria-hidden="true">“</span>
+          <blockquote>{note}</blockquote>
+          <figcaption>{guestName || 'Invitado'}</figcaption>
+        </figure>
+      )}
+    </article>
+  )
+}
+
 // Evita volver a dibujar la galería cuando una revisión trae exactamente lo mismo
 function keepIfUnchanged(current, next) {
   return JSON.stringify(current) === JSON.stringify(next) ? current : next
@@ -577,7 +625,8 @@ function App() {
       setGuestName('')
       setMessage('')
       setView('confirm')
-      setStatusMessage('Tus fotografías quedaron pendientes de revisión familiar.')
+      // La pantalla de confirmación ya lo explica; en la portada queda la nota bajo la galería
+      setStatusMessage('')
       return
     }
 
@@ -1220,58 +1269,23 @@ function App() {
                   {galleryColumns.map((column, columnIndex) => (
                     <div className="gallery-column" key={columnIndex}>
                       {column.map(({ submission, index: submissionIndex }) => {
-                        const hasNote = (submission.message ?? '').trim() !== ''
-                        const [coverPhoto, ...restPhotos] = submission.photos
-                        const photoCount = submission.photos.length
-                        const photoTape = tapeFor(submissionIndex)
-                        // Cada invitado es un solo bloque: sus fotos apiladas y su
-                        // mensaje debajo, como en un libro de firmas. Al tocarlo se
-                        // recorren solo las fotos de ese envío.
                         return (
-                          <article key={submission.id} className="guest-block">
-                            <div className={`photo-stack${photoCount > 1 ? ' is-stacked' : ''}`}>
-                              {restPhotos.slice(0, 2).map((photo, layerIndex) => (
-                                <div key={photo.id} className={`photo-stack-layer layer-${layerIndex + 1}`} aria-hidden="true">
-                                  <PhotoImage src={thumbnailUrl(photo.image_url)} alt="" loading="lazy" decoding="async" />
-                                </div>
-                              ))}
-                              <button
-                                type="button"
-                                className={`photo-card ${photoTape.className}`}
-                                style={photoTape.style}
-                                onClick={() => openLightbox(0, submission.photos)}
-                                aria-label={
-                                  photoCount > 1
-                                    ? `Ver las ${photoCount} fotos de ${submission.guest_name || 'invitado'}`
-                                    : 'Abrir foto en pantalla completa'
-                                }
-                              >
-                                <PhotoImage
-                                  src={thumbnailUrl(coverPhoto.image_url)}
-                                  alt={coverPhoto.message || 'Foto del bautizo'}
-                                  loading="lazy"
-                                  decoding="async"
-                                />
-                                {photoCount > 1 && (
-                                  <span className="photo-stack-count" aria-hidden="true">
-                                    {photoCount} fotos
-                                  </span>
-                                )}
-                              </button>
-                            </div>
-                            {hasNote && (
-                              <figure className="guest-note">
-                                <span className="guest-note-mark" aria-hidden="true">“</span>
-                                <blockquote>{submission.message}</blockquote>
-                                <figcaption>{submission.guest_name || 'Invitado'}</figcaption>
-                              </figure>
-                            )}
-                          </article>
+                          <GuestBlock
+                            key={submission.id}
+                            photoUrls={submission.photos.map((photo) => thumbnailUrl(photo.image_url))}
+                            guestName={submission.guest_name}
+                            message={submission.message}
+                            tape={tapeFor(submissionIndex)}
+                            onOpen={() => openLightbox(0, submission.photos)}
+                          />
                         )
                       })}
                     </div>
                   ))}
                 </div>
+                <p className="gallery-review-hint">
+                  ¿Aún no ves tus fotos? Están en revisión de la familia.
+                </p>
               </section>
             ) : (
               <section className="review-notice" aria-live="polite">
@@ -1413,6 +1427,29 @@ function App() {
                   />
                 </div>
               </section>
+
+              <section className="upload-step upload-preview-step">
+                <h3 className="upload-step-title">Así se verá en el álbum</h3>
+                {/* Mientras no elija fotos se muestran unas de la familia como ejemplo */}
+                <div className="gallery-masonry upload-preview">
+                  <div className="gallery-column">
+                    <GuestBlock
+                      photoUrls={
+                        previewUrls.length
+                          ? previewUrls
+                          : familyPhotos.slice(0, 3).map((photo) => photo.thumb_url)
+                      }
+                      guestName={guestName.trim() || 'Tu nombre'}
+                      message={message.trim() || 'Aquí aparecerá tu mensaje para la familia.'}
+                      tape={tapeFor(0)}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <p className="review-hint">
+                Tus fotografías serán revisadas por la familia antes de publicarse en el álbum.
+              </p>
 
               <button
                 type="button"

@@ -1561,6 +1561,26 @@
   font-weight: 700;
 }
 
+/* Vista previa al subir: un solo bloque, centrado y un poco más chico */
+.upload-preview {
+  grid-template-columns: minmax(0, 220px);
+  justify-content: center;
+}
+
+.review-hint {
+  margin: 0;
+  color: #8a96a3;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.gallery-review-hint {
+  margin: 26px 0 0;
+  color: #8a96a3;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 .guest-block .guest-note {
   margin: 16px 0 0;
 }
