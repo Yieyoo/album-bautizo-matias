@@ -31,9 +31,9 @@ export const familyPhotoFiles = [
 export const familyPhotos = familyPhotoFiles.map(({ file, ratio, caption, tape }, index) => ({
   id: `familia-${index + 1}`,
   image_url: `${import.meta.env.BASE_URL}matias/${file}`,
-  // Versión de 800 px para el collage: en iPhone, Safari deja en blanco fotos
-  // grandes cuando se le acaba la memoria; la completa se ve al abrirla.
-  thumb_url: `${import.meta.env.BASE_URL}matias/${file.replace('.jpg', '-sm.jpg')}`,
+  // Versión de 520 px para el collage (cada foto ocupa media pantalla): carga
+  // rápido con mala señal y no agota la memoria de Safari; la completa se ve al abrirla.
+  thumb_url: `${import.meta.env.BASE_URL}matias/${file.replace('.jpg', '-xs.jpg')}`,
   ratio,
   caption,
   tape,

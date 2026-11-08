@@ -1194,7 +1194,7 @@ function App() {
               </div>
               <div className="hero-copy">
                 <div className="hero-portrait">
-                  <img src={`${import.meta.env.BASE_URL}matias/matias-01-sm.jpg`} alt="Matías" fetchPriority="high" />
+                  <img src={`${import.meta.env.BASE_URL}matias/matias-01-xs.jpg`} alt="Matías" fetchPriority="high" />
                 </div>
                 <p className="eyebrow">Mi bautizo</p>
                 <h1>MATÍAS</h1>
@@ -1252,13 +1252,14 @@ function App() {
                           onClick={() => openLightbox(index, familyPhotos, false)}
                           aria-label="Abrir foto en pantalla completa"
                         >
-                          {/* Las primeras 4 se cargan de inmediato; el resto al acercarse,
-                              para que con mala señal la página abra rápido */}
+                          {/* El collage queda debajo de la carta: sus fotos bajan al acercarse
+                              y con baja prioridad, para no quitarle señal a la portada */}
                           <PhotoImage
                             src={photo.thumb_url}
                             alt={photo.caption || 'Matías'}
                             style={{ aspectRatio: `1 / ${photo.ratio}` }}
-                            loading={index < 4 ? 'eager' : 'lazy'}
+                            loading="lazy"
+                            fetchPriority="low"
                             decoding="async"
                           />
                           {photo.caption && <span className="photo-caption">{photo.caption}</span>}
