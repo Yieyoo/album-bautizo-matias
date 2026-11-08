@@ -1182,7 +1182,7 @@ function App() {
               </div>
               <div className="hero-copy">
                 <div className="hero-portrait">
-                  <img src={`${import.meta.env.BASE_URL}matias/matias-01-sm.jpg`} alt="Matías" />
+                  <img src={`${import.meta.env.BASE_URL}matias/matias-01-sm.jpg`} alt="Matías" fetchPriority="high" />
                 </div>
                 <p className="eyebrow">Mi bautizo</p>
                 <h1>MATÍAS</h1>
