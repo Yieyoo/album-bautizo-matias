@@ -129,7 +129,12 @@ const heroDots = [
 const introSeenKey = 'album-matias-intro-visto'
 
 // El intro se muestra una vez por visita y nunca con "Reducir movimiento"
+// Apagado durante el evento: con la señal del lugar y celulares más viejos,
+// el intro hacía que la página tardara en abrir. Cambiar a true para volver a usarlo.
+const INTRO_ENABLED = false
+
 function shouldShowIntro() {
+  if (!INTRO_ENABLED) return false
   try {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false
     return !window.sessionStorage.getItem(introSeenKey)
@@ -1235,12 +1240,13 @@ function App() {
                           onClick={() => openLightbox(index, familyPhotos, false)}
                           aria-label="Abrir foto en pantalla completa"
                         >
-                          {/* Sin carga diferida: son pocas y ligeras, y Safari a veces no
-                              cargaba las que van inclinadas hasta mover la pantalla */}
+                          {/* Las primeras 4 se cargan de inmediato; el resto al acercarse,
+                              para que con mala señal la página abra rápido */}
                           <PhotoImage
                             src={photo.thumb_url}
                             alt={photo.caption || 'Matías'}
                             style={{ aspectRatio: `1 / ${photo.ratio}` }}
+                            loading={index < 4 ? 'eager' : 'lazy'}
                             decoding="async"
                           />
                           {photo.caption && <span className="photo-caption">{photo.caption}</span>}
