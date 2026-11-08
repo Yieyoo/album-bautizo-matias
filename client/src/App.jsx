@@ -225,6 +225,18 @@ const introSparks = Array.from({ length: 18 }, (_, index) => {
   return [Math.cos(angle) * distance, Math.sin(angle) * distance * 1.3, 3.15 + (index % 5) * 0.05]
 })
 
+// crypto.randomUUID solo existe desde iOS 15.4; en iPhones más viejos fallaba
+// el envío de fotos. El servidor exige el mismo formato UUID v4.
+function createId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+  const bytes = new Uint8Array(16)
+  window.crypto.getRandomValues(bytes)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
 const PHOTO_RETRIES = 2
 
 // Con mala señal (o justo al publicar una versión nueva) una foto puede fallar
@@ -586,7 +598,7 @@ function App() {
 
     // Los identificadores se conservan entre reintentos: las fotos que falten
     // se suman al mismo bloque y las que ya llegaron no se duplican.
-    submissionIdRef.current ??= crypto.randomUUID()
+    submissionIdRef.current ??= createId()
     const total = selectedFiles.length
     const failedFiles = []
     let lastError = null
@@ -599,7 +611,7 @@ function App() {
       setStatusMessage(`Subiendo foto ${index + 1} de ${total}...`)
       setUploadCount({ current: index + 1, total })
       if (!photoIdsRef.current.has(file)) {
-        photoIdsRef.current.set(file, crypto.randomUUID())
+        photoIdsRef.current.set(file, createId())
       }
 
       try {

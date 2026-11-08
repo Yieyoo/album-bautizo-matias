@@ -35,7 +35,25 @@
     <title>Álbum del bautizo de Matías</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Se ve mientras arranca la página (y queda si un navegador no la puede abrir),
+         en lugar de una pantalla en blanco. La página lo reemplaza al cargar. -->
+    <div id="root">
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: #fffdfa; color: #4f6a82; font-family: Georgia, serif; text-align: center;">
+        <p style="margin: 0; font-size: 13px; letter-spacing: 0.3em; color: #917d6c;">MI BAUTIZO</p>
+        <p style="margin: 0; font-size: 44px; letter-spacing: 0.05em;">MATÍAS</p>
+        <p id="boot-message" style="margin: 8px 0 0; font-size: 16px; font-style: italic; color: #7d8f9f;">Cargando el álbum…</p>
+      </div>
+    </div>
+    <script>
+      // Si a los 12 s la página no arrancó, se explica qué hacer en vez de seguir esperando
+      setTimeout(function () {
+        var message = document.getElementById('boot-message')
+        if (message) {
+          message.innerHTML =
+            'Está tardando más de lo normal.<br />Revisa tu señal o abre <b>bautizomatias2026.com</b> en Safari o Chrome.'
+        }
+      }, 12000)
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
