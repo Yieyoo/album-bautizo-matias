@@ -45,6 +45,20 @@
       </div>
     </div>
     <script>
+      // Si algo falla antes de que arranque la página, se muestra el motivo en
+      // pantalla para que el invitado pueda mandar captura
+      window.addEventListener(
+        'error',
+        function (event) {
+          var message = document.getElementById('boot-message')
+          if (!message) return
+          var target = event.target
+          // También atrapa archivos que no descargaron (por ejemplo el código de la página)
+          var detail = event.message || (target && (target.src || target.href)) || 'error'
+          message.textContent = 'No se pudo abrir el álbum en este navegador (' + detail + ').'
+        },
+        true
+      )
       // Si a los 12 s la página no arrancó, se explica qué hacer en vez de seguir esperando
       setTimeout(function () {
         var message = document.getElementById('boot-message')
